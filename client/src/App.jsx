@@ -8,6 +8,7 @@ import Alert from './components/Alert.jsx';
 import Stepper from './components/Stepper.jsx';
 import ThemeSelector from './components/ThemeSelector.jsx';
 import AIEnhancePanel from './components/AIEnhancePanel.jsx';
+import ExportPanel from './components/ExportPanel.jsx';
 
 const EMPTY_PRESENTATION = { title: '', theme: 'default', slides: [] };
 
@@ -15,6 +16,7 @@ const STEPS = [
   { id: 'write', label: 'Write', title: 'Write your slides', description: 'Type or paste Markdown, or upload a file. The preview updates as you type.' },
   { id: 'theme', label: 'Theme', title: 'Choose a theme', description: 'Pick a look for your deck. You can change it at any time.' },
   { id: 'enhance', label: 'Enhance', title: 'Enhance with AI', description: 'Let AI polish your content. You review every change before it is applied.' },
+  { id: 'export', label: 'Export', title: 'Export your deck', description: 'Download your slides as a PDF, ready to present or share.' },
 ];
 
 export default function App() {
@@ -185,6 +187,17 @@ export default function App() {
               onError={showError}
               canUndo={Boolean(aiUndo)}
               onUndo={handleUndoAI}
+            />
+          )}
+
+          {step === 'export' && (
+            <ExportPanel
+              markdown={markdown}
+              presentation={presentation}
+              theme={theme}
+              themes={themes}
+              onError={showError}
+              onSuccess={showSuccess}
             />
           )}
 
