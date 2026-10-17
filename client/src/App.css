@@ -687,6 +687,121 @@ code {
   font-size: 14px;
 }
 
+/* ---------- AI ---------- */
+.ai-panel,
+.ai-result {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ai-actions {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.ai-actions legend {
+  margin-bottom: 8px;
+}
+
+.ai-actions:disabled {
+  opacity: 0.6;
+}
+
+.ai-action {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.ai-actions:disabled .ai-action {
+  cursor: not-allowed;
+}
+
+.ai-action input {
+  margin-top: 4px;
+  accent-color: var(--primary);
+}
+
+.ai-action > span {
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+}
+
+.ai-action.is-active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.ai-model {
+  margin: 0;
+  font-size: 12px;
+}
+
+.compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.compare-column {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.compare-text {
+  margin: 0;
+  height: 320px;
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.compare-text--after {
+  border-color: color-mix(in srgb, var(--success) 50%, var(--border));
+  background: var(--success-soft);
+  color: var(--text);
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2s;
+  }
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 900px) {
   .workspace {

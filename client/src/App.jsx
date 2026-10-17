@@ -7,12 +7,14 @@ import SlidePreview from './components/SlidePreview.jsx';
 import Alert from './components/Alert.jsx';
 import Stepper from './components/Stepper.jsx';
 import ThemeSelector from './components/ThemeSelector.jsx';
+import AIEnhancePanel from './components/AIEnhancePanel.jsx';
 
 const EMPTY_PRESENTATION = { title: '', theme: 'default', slides: [] };
 
 const STEPS = [
   { id: 'write', label: 'Write', title: 'Write your slides', description: 'Type or paste Markdown, or upload a file. The preview updates as you type.' },
   { id: 'theme', label: 'Theme', title: 'Choose a theme', description: 'Pick a look for your deck. You can change it at any time.' },
+  { id: 'enhance', label: 'Enhance', title: 'Enhance with AI', description: 'Let AI polish your content. You review every change before it is applied.' },
 ];
 
 export default function App() {
@@ -28,6 +30,9 @@ export default function App() {
   const [themes, setThemes] = useState([]);
   // null means "use the theme from the deck's front matter".
   const [themeOverride, setThemeOverride] = useState(null);
+  const [aiStatus, setAiStatus] = useState(null);
+  // Snapshot taken before the last AI change, so it can be undone.
+  const [aiUndo, setAiUndo] = useState(null);
 
   const showError = useCallback((message) => setNotice({ type: 'error', message }), []);
   const showSuccess = useCallback((message) => setNotice({ type: 'success', message }), []);
@@ -44,6 +49,10 @@ export default function App() {
       .getThemes()
       .then(({ themes: list }) => setThemes(list))
       .catch((err) => showError(err.message));
+    api
+      .getAIStatus()
+      .then(setAiStatus)
+      .catch(() => setAiStatus({ configured: false, model: null, actions: [] }));
   }, [showError]);
 
   // Real-time preview: re-parse shortly after the user stops typing.
@@ -79,7 +88,22 @@ export default function App() {
     setFilename(name);
     setCurrentSlide(0);
     setThemeOverride(null);
+    setAiUndo(null);
     if (parsed) setPresentation(parsed);
+  };
+
+  const handleApplyAI = (enhanced) => {
+    setAiUndo({ before: markdown, after: enhanced });
+    setMarkdown(enhanced);
+    showSuccess('AI changes applied. You can undo them from this step.');
+  };
+
+  const handleUndoAI = () => {
+    if (!aiUndo) return;
+    if (markdown !== aiUndo.after && !window.confirm('You have edited the deck since the AI change. Undo anyway and lose those edits?')) return;
+    setMarkdown(aiUndo.before);
+    setAiUndo(null);
+    showSuccess('AI changes undone.');
   };
 
   const handleLoadSample = async () => {
@@ -152,6 +176,17 @@ export default function App() {
           )}
 
           {step === 'theme' && <ThemeSelector themes={themes} selected={theme} onSelect={setThemeOverride} previewSlide={slides[0]} />}
+
+          {step === 'enhance' && (
+            <AIEnhancePanel
+              aiStatus={aiStatus}
+              markdown={markdown}
+              onApply={handleApplyAI}
+              onError={showError}
+              canUndo={Boolean(aiUndo)}
+              onUndo={handleUndoAI}
+            />
+          )}
 
           <div className="step-nav">
             <button type="button" className="btn btn-secondary" onClick={() => setStep(STEPS[stepIndex - 1].id)} disabled={stepIndex === 0}>
