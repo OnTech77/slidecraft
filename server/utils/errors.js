@@ -62,6 +62,3 @@ export function errorHandler(err, req, res, _next) {
 export function notFoundHandler(req, res) {
   res.status(404).json({ error: { code: 'NOT_FOUND', message: 'That endpoint does not exist.' } });
 }
-
-/** Wrap an async route handler so rejected promises reach the error middleware. */
-export const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);

@@ -1,0 +1,13 @@
+/* Default: clean and bright with an indigo accent. */
+.sc-theme-default {
+  --sc-bg: #ffffff;
+  --sc-fg: #1f2937;
+  --sc-heading: #111827;
+  --sc-accent: #4f46e5;
+  --sc-muted: #6b7280;
+  --sc-strong: #111827;
+  --sc-code-bg: #f3f4f6;
+  --sc-code-fg: #111827;
+  --sc-border: #e5e7eb;
+  --sc-table-head: #eef2ff;
+}

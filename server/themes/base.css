@@ -1,0 +1,184 @@
+/*
+ * Base slide styles shared by every theme.
+ * Slides are designed at 1280x720 and scaled to fit by the preview and the PDF export.
+ * Themes only set the --sc-* variables below (and may add small decorative rules).
+ */
+.sc-slide {
+  --sc-font-body: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --sc-font-heading: var(--sc-font-body);
+  --sc-font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  position: relative;
+  box-sizing: border-box;
+  width: 1280px;
+  height: 720px;
+  padding: 72px 96px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--sc-bg);
+  color: var(--sc-fg);
+  font-family: var(--sc-font-body);
+  font-size: 30px;
+  line-height: 1.45;
+  text-align: left;
+  -webkit-font-smoothing: antialiased;
+}
+
+.sc-slide *,
+.sc-slide *::before,
+.sc-slide *::after {
+  box-sizing: border-box;
+}
+
+.sc-slide-content > * {
+  margin: 0 0 24px;
+}
+
+.sc-slide-content > :last-child {
+  margin-bottom: 0;
+}
+
+.sc-slide h1,
+.sc-slide h2,
+.sc-slide h3,
+.sc-slide h4,
+.sc-slide h5,
+.sc-slide h6 {
+  font-family: var(--sc-font-heading);
+  color: var(--sc-heading);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+.sc-slide h1 { font-size: 72px; }
+.sc-slide h2 { font-size: 52px; }
+.sc-slide h3 { font-size: 38px; }
+.sc-slide h4,
+.sc-slide h5,
+.sc-slide h6 { font-size: 32px; }
+
+.sc-slide h2::after {
+  content: '';
+  display: block;
+  width: 72px;
+  height: 6px;
+  margin-top: 20px;
+  border-radius: 3px;
+  background: var(--sc-accent);
+}
+
+.sc-slide p { margin: 0 0 24px; }
+
+.sc-slide strong { color: var(--sc-strong, inherit); }
+
+.sc-slide a {
+  color: var(--sc-accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.sc-slide ul,
+.sc-slide ol {
+  padding-left: 1.3em;
+}
+
+.sc-slide li { margin: 10px 0; }
+.sc-slide li > ul,
+.sc-slide li > ol { margin: 6px 0 0; font-size: 0.9em; }
+.sc-slide li::marker { color: var(--sc-accent); font-weight: 700; }
+
+.sc-slide code {
+  font-family: var(--sc-font-mono);
+  font-size: 0.85em;
+  padding: 0.1em 0.35em;
+  border-radius: 6px;
+  background: var(--sc-code-bg);
+  color: var(--sc-code-fg);
+}
+
+.sc-slide pre {
+  padding: 28px 32px;
+  border-radius: 14px;
+  background: var(--sc-code-bg);
+  color: var(--sc-code-fg);
+  font-size: 24px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: hidden;
+}
+
+.sc-slide pre code {
+  padding: 0;
+  background: none;
+  font-size: inherit;
+}
+
+.sc-slide blockquote {
+  margin-left: 0;
+  margin-right: 0;
+  padding: 8px 0 8px 36px;
+  border-left: 8px solid var(--sc-accent);
+  font-family: var(--sc-font-heading);
+  font-size: 44px;
+  font-style: italic;
+  line-height: 1.3;
+  color: var(--sc-heading);
+}
+
+.sc-slide blockquote p { margin: 0; }
+
+.sc-slide table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 26px;
+}
+
+.sc-slide th,
+.sc-slide td {
+  padding: 14px 20px;
+  border-bottom: 2px solid var(--sc-border);
+  text-align: left;
+}
+
+.sc-slide th {
+  background: var(--sc-table-head);
+  color: var(--sc-heading);
+}
+
+.sc-slide img {
+  display: block;
+  max-width: 100%;
+  max-height: 460px;
+  margin: 0 auto;
+  border-radius: 12px;
+  object-fit: contain;
+}
+
+.sc-slide hr { display: none; }
+
+/* Title slides: centered, bigger heading, subtitle in muted color. */
+.sc-slide--title {
+  align-items: center;
+  text-align: center;
+}
+
+.sc-slide--title h1 { font-size: 88px; }
+.sc-slide--title h2::after { margin-left: auto; margin-right: auto; }
+.sc-slide--title p { font-size: 36px; color: var(--sc-muted); }
+
+/* Quote slides: the quote takes center stage, attribution below. */
+.sc-slide--quote p { color: var(--sc-muted); font-size: 30px; }
+.sc-slide--quote blockquote p { color: inherit; font-size: inherit; }
+
+.sc-slide-number {
+  position: absolute;
+  right: 40px;
+  bottom: 28px;
+  font-size: 18px;
+  color: var(--sc-muted);
+  font-variant-numeric: tabular-nums;
+}

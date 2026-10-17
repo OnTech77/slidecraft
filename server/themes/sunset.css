@@ -1,0 +1,13 @@
+/* Sunset: warm peach-to-rose gradient with an orange accent. */
+.sc-theme-sunset {
+  --sc-bg: linear-gradient(135deg, #fff7ed 0%, #ffe4e6 100%);
+  --sc-fg: #57301c;
+  --sc-heading: #9a3412;
+  --sc-accent: #ea580c;
+  --sc-muted: #9a6a55;
+  --sc-strong: #7c2d12;
+  --sc-code-bg: rgba(255, 255, 255, 0.7);
+  --sc-code-fg: #431407;
+  --sc-border: #fdba74;
+  --sc-table-head: rgba(234, 88, 12, 0.1);
+}

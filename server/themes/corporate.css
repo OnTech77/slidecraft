@@ -1,0 +1,21 @@
+/* Corporate: crisp white with a navy brand band along the top. */
+.sc-theme-corporate {
+  --sc-bg: #ffffff;
+  --sc-fg: #334155;
+  --sc-heading: #0b3d74;
+  --sc-accent: #0b5cad;
+  --sc-muted: #64748b;
+  --sc-strong: #0b3d74;
+  --sc-code-bg: #f1f5f9;
+  --sc-code-fg: #0f172a;
+  --sc-border: #cbd5e1;
+  --sc-table-head: #e0ecf8;
+}
+
+.sc-theme-corporate .sc-slide {
+  border-top: 16px solid #0b3d74;
+}
+
+.sc-theme-corporate .sc-slide--title {
+  background: linear-gradient(180deg, #ffffff 0%, #eef4fb 100%);
+}

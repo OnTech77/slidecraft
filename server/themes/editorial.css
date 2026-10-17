@@ -1,0 +1,23 @@
+/* Editorial: warm paper, serif headings and a deep red accent. */
+.sc-theme-editorial {
+  --sc-bg: #faf7f2;
+  --sc-fg: #2b2b2b;
+  --sc-heading: #1a1a1a;
+  --sc-accent: #b91c1c;
+  --sc-muted: #6b6359;
+  --sc-strong: #1a1a1a;
+  --sc-code-bg: #efe9df;
+  --sc-code-fg: #2b2b2b;
+  --sc-border: #d9d0c3;
+  --sc-table-head: #f1ebe1;
+}
+
+.sc-theme-editorial .sc-slide {
+  --sc-font-heading: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+}
+
+.sc-theme-editorial .sc-slide h1,
+.sc-theme-editorial .sc-slide h2 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}

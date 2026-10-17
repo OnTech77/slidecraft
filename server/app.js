@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import { errorHandler, notFoundHandler } from './utils/errors.js';
+import { slidesRouter } from './routes/slides.js';
+import { themesRouter } from './routes/themes.js';
 
 export const BODY_LIMIT = '10mb';
 
@@ -26,6 +28,8 @@ export function createApp({ clientOrigin = process.env.CLIENT_ORIGIN ?? 'http://
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok' });
   });
+  app.use('/api/slides', slidesRouter);
+  app.use('/api/themes', themesRouter);
 
   app.use('/api', notFoundHandler);
   app.use(errorHandler);
