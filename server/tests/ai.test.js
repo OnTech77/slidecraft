@@ -1,25 +1,25 @@
 import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { startTestServer } from './helpers.js';
-import { MAX_AI_CHARS, enhanceMarkdown, mapOpenAIError, stripWrappingFence } from '../services/aiService.js';
+import { MAX_AI_CHARS, enhanceMarkdown, mapAIError, stripWrappingFence } from '../services/aiService.js';
 
-/** A stand-in for the OpenAI client that records the request and returns a canned answer. */
+/** A stand-in for the Anthropic client that records the request and returns a canned answer. */
 function fakeClient(respond) {
   const calls = [];
   return {
     calls,
-    chat: {
-      completions: {
-        create: async (request) => {
+    beta: {
+      messages: {
+        stream: (request) => {
           calls.push(request);
-          return respond(request);
+          return { finalMessage: async () => respond(request) };
         },
       },
     },
   };
 }
 
-const answer = (content) => () => ({ choices: [{ message: { content } }] });
+const answer = (text, stop_reason = 'end_turn') => () => ({ stop_reason, content: [{ type: 'text', text }] });
 
 describe('aiService', () => {
   it('sends the deck inside <deck> tags with the action instruction', async () => {
@@ -27,6 +27,7 @@ describe('aiService', () => {
     const result = await enhanceMarkdown('# Hi', 'improve', { client });
     assert.equal(result.markdown, '# Better');
     const userMessage = client.calls[0].messages.at(-1).content;
+    assert.equal(client.calls[0].system.includes('<deck> tags'), true);
     assert.match(userMessage, /<deck>\n# Hi\n<\/deck>/);
     assert.match(userMessage, /Improve the wording/);
   });
@@ -43,20 +44,22 @@ describe('aiService', () => {
     assert.equal(client.calls.length, 0);
   });
 
-  it('rejects empty AI responses', async () => {
+  it('rejects empty, refused and truncated AI responses', async () => {
     await assert.rejects(enhanceMarkdown('# Hi', 'notes', { client: fakeClient(answer('  ')) }), { code: 'AI_EMPTY' });
+    await assert.rejects(enhanceMarkdown('# Hi', 'notes', { client: fakeClient(answer('', 'refusal')) }), { code: 'AI_REFUSED' });
+    await assert.rejects(enhanceMarkdown('# Hi', 'notes', { client: fakeClient(answer('# Half', 'max_tokens')) }), { code: 'AI_OUTPUT_TOO_LONG' });
   });
 
   it('maps provider errors to friendly messages without leaking details', async () => {
     const original = console.error;
     console.error = () => {};
     try {
-      assert.equal(mapOpenAIError({ status: 401, message: 'Incorrect API key sk-123' }).code, 'AI_AUTH');
-      assert.equal(mapOpenAIError({ status: 429 }).status, 429);
-      assert.equal(mapOpenAIError({ name: 'APIConnectionTimeoutError' }).code, 'AI_TIMEOUT');
-      const generic = mapOpenAIError(new Error('internal sk-123'));
+      assert.equal(mapAIError({ status: 401, message: 'invalid x-api-key sk-ant-123' }).code, 'AI_AUTH');
+      assert.equal(mapAIError({ status: 429 }).status, 429);
+      assert.equal(mapAIError({ name: 'APIConnectionTimeoutError' }).code, 'AI_TIMEOUT');
+      const generic = mapAIError(new Error('internal sk-ant-123'));
       assert.equal(generic.code, 'AI_ERROR');
-      assert.doesNotMatch(generic.message, /sk-123/);
+      assert.doesNotMatch(generic.message, /sk-/);
 
       const failing = fakeClient(() => {
         throw Object.assign(new Error('quota'), { status: 429 });
@@ -72,12 +75,12 @@ describe('AI API without a key', () => {
   let server;
   let savedKey;
   before(async () => {
-    savedKey = process.env.OPENAI_API_KEY;
-    delete process.env.OPENAI_API_KEY;
+    savedKey = process.env.ANTHROPIC_API_KEY;
+    delete process.env.ANTHROPIC_API_KEY;
     server = await startTestServer();
   });
   after(async () => {
-    if (savedKey !== undefined) process.env.OPENAI_API_KEY = savedKey;
+    if (savedKey !== undefined) process.env.ANTHROPIC_API_KEY = savedKey;
     await server.close();
   });
 

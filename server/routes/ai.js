@@ -3,7 +3,7 @@ import rateLimit from 'express-rate-limit';
 import { validateMarkdown } from '../utils/validation.js';
 import { enhanceMarkdown, getModel, isAIConfigured, listActions } from '../services/aiService.js';
 
-// Without user accounts, anyone who can reach the server can spend the OpenAI credit,
+// Without user accounts, anyone who can reach the server can spend the Anthropic credit,
 // so cap AI requests per IP address.
 const aiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
