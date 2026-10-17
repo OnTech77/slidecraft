@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { errorHandler, notFoundHandler } from './utils/errors.js';
 import { slidesRouter } from './routes/slides.js';
 import { themesRouter } from './routes/themes.js';
+import { aiRouter } from './routes/ai.js';
 
 export const BODY_LIMIT = '10mb';
 
@@ -30,6 +31,7 @@ export function createApp({ clientOrigin = process.env.CLIENT_ORIGIN ?? 'http://
   });
   app.use('/api/slides', slidesRouter);
   app.use('/api/themes', themesRouter);
+  app.use('/api/ai', aiRouter);
 
   app.use('/api', notFoundHandler);
   app.use(errorHandler);
