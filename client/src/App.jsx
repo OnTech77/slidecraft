@@ -5,8 +5,15 @@ import MarkdownEditor from './components/MarkdownEditor.jsx';
 import FileUpload from './components/FileUpload.jsx';
 import SlidePreview from './components/SlidePreview.jsx';
 import Alert from './components/Alert.jsx';
+import Stepper from './components/Stepper.jsx';
+import ThemeSelector from './components/ThemeSelector.jsx';
 
 const EMPTY_PRESENTATION = { title: '', theme: 'default', slides: [] };
+
+const STEPS = [
+  { id: 'write', label: 'Write', title: 'Write your slides', description: 'Type or paste Markdown, or upload a file. The preview updates as you type.' },
+  { id: 'theme', label: 'Theme', title: 'Choose a theme', description: 'Pick a look for your deck. You can change it at any time.' },
+];
 
 export default function App() {
   const [markdown, setMarkdown] = useState('');
@@ -17,6 +24,10 @@ export default function App() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [notice, setNotice] = useState(null);
+  const [step, setStep] = useState('write');
+  const [themes, setThemes] = useState([]);
+  // null means "use the theme from the deck's front matter".
+  const [themeOverride, setThemeOverride] = useState(null);
 
   const showError = useCallback((message) => setNotice({ type: 'error', message }), []);
   const showSuccess = useCallback((message) => setNotice({ type: 'success', message }), []);
@@ -27,6 +38,13 @@ export default function App() {
     const timer = setTimeout(() => setNotice(null), 4000);
     return () => clearTimeout(timer);
   }, [notice]);
+
+  useEffect(() => {
+    api
+      .getThemes()
+      .then(({ themes: list }) => setThemes(list))
+      .catch((err) => showError(err.message));
+  }, [showError]);
 
   // Real-time preview: re-parse shortly after the user stops typing.
   const debouncedMarkdown = useDebounce(markdown, 300);
@@ -50,7 +68,9 @@ export default function App() {
 
   const slides = presentation.slides;
   const current = Math.max(0, Math.min(currentSlide, slides.length - 1));
-  const theme = presentation.theme;
+  const theme = themeOverride ?? presentation.theme;
+  const stepIndex = STEPS.findIndex((s) => s.id === step);
+  const stepInfo = STEPS[stepIndex];
 
   const confirmReplace = () => !markdown.trim() || window.confirm('Replace your current Markdown? Unsaved changes will be lost.');
 
@@ -58,6 +78,7 @@ export default function App() {
     setMarkdown(content);
     setFilename(name);
     setCurrentSlide(0);
+    setThemeOverride(null);
     if (parsed) setPresentation(parsed);
   };
 
@@ -98,6 +119,7 @@ export default function App() {
           <img src="/favicon.svg" alt="" width="28" height="28" />
           <span>Slidecraft</span>
         </div>
+        <Stepper steps={STEPS} current={step} onChange={setStep} />
       </header>
 
       {notice && (
@@ -111,18 +133,36 @@ export default function App() {
       <main className="workspace">
         <aside className="panel">
           <div className="panel-section">
-            <h1 className="panel-title">Write your slides</h1>
-            <p className="muted">Type or paste Markdown, or upload a file. The preview updates as you type.</p>
+            <h1 className="panel-title">{stepInfo.title}</h1>
+            <p className="muted">{stepInfo.description}</p>
           </div>
-          <FileUpload onFile={handleFile} onError={showError} busy={uploading} />
-          <MarkdownEditor
-            value={markdown}
-            onChange={setMarkdown}
-            onLoadSample={handleLoadSample}
-            onClear={handleClear}
-            slideCount={slides.length}
-            filename={filename}
-          />
+
+          {step === 'write' && (
+            <>
+              <FileUpload onFile={handleFile} onError={showError} busy={uploading} />
+              <MarkdownEditor
+                value={markdown}
+                onChange={setMarkdown}
+                onLoadSample={handleLoadSample}
+                onClear={handleClear}
+                slideCount={slides.length}
+                filename={filename}
+              />
+            </>
+          )}
+
+          {step === 'theme' && <ThemeSelector themes={themes} selected={theme} onSelect={setThemeOverride} previewSlide={slides[0]} />}
+
+          <div className="step-nav">
+            <button type="button" className="btn btn-secondary" onClick={() => setStep(STEPS[stepIndex - 1].id)} disabled={stepIndex === 0}>
+              Back
+            </button>
+            {stepIndex < STEPS.length - 1 && (
+              <button type="button" className="btn btn-primary" onClick={() => setStep(STEPS[stepIndex + 1].id)}>
+                Next: {STEPS[stepIndex + 1].label}
+              </button>
+            )}
+          </div>
         </aside>
 
         <SlidePreview slides={slides} theme={theme} current={current} onSelect={setCurrentSlide} loading={parsing} error={parseError} />
