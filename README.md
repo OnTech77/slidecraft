@@ -9,7 +9,7 @@ Write or upload Markdown, watch your slides update in real time, pick a theme, l
 - **Write or upload**: type in the editor or drop in a `.md` file (up to 10 MB)
 - **Real-time preview**: slides re-render as you type, with thumbnails, keyboard navigation and speaker notes
 - **Themes**: Default, Midnight, Corporate, Sunset and Editorial, previewed on your own slides
-- **AI enhancements** (Claude): improve wording, make concise, add speaker notes, improve titles, expand an outline. You review a before/after comparison before anything changes, and can undo it.
+- **AI enhancements** (OpenAI): improve wording, make concise, add speaker notes, improve titles, expand an outline. You review a before/after comparison before anything changes, and can undo it.
 - **PDF export**: one 16:9 page per slide, rendered by headless Chrome using the same CSS as the preview
 
 ## Quick start
@@ -20,9 +20,9 @@ Requires **Node.js 20.19 or newer**.
 # 1. Install dependencies for the root, server and client
 npm run install:all
 
-# 2. Configure the server (the Anthropic API key is optional)
+# 2. Configure the server (the OpenAI key is optional)
 cp server/.env.example server/.env
-#    then edit server/.env and set ANTHROPIC_API_KEY to enable AI features
+#    then edit server/.env and set OPENAI_API_KEY to enable AI features
 
 # 3. Start the server (port 3001) and client (port 5173) together
 npm run dev
@@ -30,7 +30,7 @@ npm run dev
 
 Open http://localhost:5173 and click **Load sample** to try it with [`sample.md`](sample.md).
 
-Without an `ANTHROPIC_API_KEY`, everything except the AI step works, and the AI step explains how to turn it on.
+Without an `OPENAI_API_KEY`, everything except the AI step works, and the AI step explains how to turn it on.
 
 ### Production
 
@@ -87,7 +87,7 @@ slidecraft/
 │  ├─ app.js                 Express app: security middleware, routes, error handling
 │  ├─ routes/                slides.js, themes.js, ai.js, export.js
 │  ├─ services/
-│  │  ├─ aiService.js        Claude integration and prompt rules
+│  │  ├─ aiService.js        OpenAI integration and prompt rules
 │  │  ├─ slideGenerator.js   Markdown → presentation (layouts, themes, export HTML)
 │  │  └─ exportService.js    PDF rendering with Puppeteer
 │  ├─ utils/
@@ -127,7 +127,7 @@ All endpoints are under `/api`. Errors always look like `{ "error": { "code": ".
 - **Uploads**: `.md`/`.markdown` only, one file, 10 MB maximum. Files are kept in memory and never written to disk, and they must be valid UTF-8 text.
 - **Sanitization**: Markdown HTML is cleaned with DOMPurify, which removes scripts, event handlers, inline styles, iframes, forms and `javascript:` links. Control characters are stripped from input.
 - **Errors**: clients only receive friendly messages. Stack traces and provider details are logged on the server only.
-- **AI**: the Anthropic API key stays on the server. AI requests are rate limited per IP, and content is limited to 30,000 characters.
+- **AI**: the OpenAI key stays on the server. AI requests are rate limited per IP, and content is limited to 30,000 characters.
 - **PDF export**: JavaScript is disabled in the render, and only `data:` URLs and public `https://` resources can be loaded, so a deck can't make the server read local files or internal addresses. Exports have timeouts and a rate limit.
 - **HTTP**: helmet security headers (including a Content Security Policy), a CORS allow-list and a 10 MB request body limit.
 
@@ -137,5 +137,5 @@ All endpoints are under `/api`. Errors always look like `{ "error": { "code": ".
 | --- | --- | --- |
 | `PORT` | `3001` | API port |
 | `CLIENT_ORIGIN` | `http://localhost:5173` | Allowed CORS origin in development |
-| `ANTHROPIC_API_KEY` | (empty) | Enables AI features (get one at https://platform.claude.com) |
-| `ANTHROPIC_MODEL` | `claude-opus-5-5` | Claude model used for enhancements |
+| `OPENAI_API_KEY` | (empty) | Enables AI features |
+| `OPENAI_MODEL` | `gpt-4o-mini` | Model used for enhancements |

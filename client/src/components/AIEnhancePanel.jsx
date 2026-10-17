@@ -88,7 +88,7 @@ export default function AIEnhancePanel({ aiStatus, markdown, onApply, onError, c
     <div className="ai-panel">
       {!configured && (
         <Alert type="warning">
-          AI enhancements are turned off. To enable them, add your <code>ANTHROPIC_API_KEY</code> to <code>server/.env</code> and restart the
+          AI enhancements are turned off. To enable them, add your <code>OPENAI_API_KEY</code> to <code>server/.env</code> and restart the
           server.
         </Alert>
       )}

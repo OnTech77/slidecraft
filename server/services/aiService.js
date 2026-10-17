@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { AppError, badRequest } from '../utils/errors.js';
 
 /** Maximum characters sent to the AI in one request (keeps cost and latency predictable). */
@@ -51,22 +51,16 @@ export function listActions() {
   return Object.entries(ACTIONS).map(([id, { label, description }]) => ({ id, label, description }));
 }
 
-export const getModel = () => process.env.ANTHROPIC_MODEL || 'claude-opus-5-5';
+export const getModel = () => process.env.OPENAI_MODEL || 'gpt-4o-mini';
 
-export const isAIConfigured = () => Boolean(process.env.ANTHROPIC_API_KEY);
-
-/** Long enough for the "expand" action to return a full deck from MAX_AI_CHARS of input. */
-const MAX_OUTPUT_TOKENS = 32_000;
-
-/** Models that can retry a safety-declined request on another model server-side. */
-const FALLBACK_MODELS = new Set(['claude-fable-5-1', 'claude-opus-5-5', 'claude-opus-5', 'claude-sonnet-5-5']);
+export const isAIConfigured = () => Boolean(process.env.OPENAI_API_KEY);
 
 let defaultClient;
 function getClient() {
   if (!isAIConfigured()) {
-    throw new AppError(503, 'AI_NOT_CONFIGURED', 'AI features are not set up. Add an Anthropic API key to the server to enable them.');
+    throw new AppError(503, 'AI_NOT_CONFIGURED', 'AI features are not set up. Add an OpenAI API key to the server to enable them.');
   }
-  defaultClient ??= new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, timeout: 180_000, maxRetries: 1 });
+  defaultClient ??= new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 60_000, maxRetries: 1 });
   return defaultClient;
 }
 
@@ -76,21 +70,21 @@ export function stripWrappingFence(text) {
   return match ? match[1] : text.trim();
 }
 
-/** Convert Anthropic SDK errors into user-friendly AppErrors (details are logged, not returned). */
-export function mapAIError(err) {
+/** Convert OpenAI SDK errors into user-friendly AppErrors (details are logged, not returned). */
+export function mapOpenAIError(err) {
   if (err instanceof AppError) return err;
   console.error('[aiService]', err?.status ?? '', err?.message ?? err);
 
-  if (err instanceof Anthropic.APIConnectionTimeoutError || err?.name === 'APIConnectionTimeoutError') {
+  if (err instanceof OpenAI.APIConnectionTimeoutError || err?.name === 'APIConnectionTimeoutError') {
     return new AppError(504, 'AI_TIMEOUT', 'The AI service took too long to respond. Please try again, or try with less content.');
   }
-  if (err instanceof Anthropic.APIConnectionError || err?.name === 'APIConnectionError') {
+  if (err instanceof OpenAI.APIConnectionError || err?.name === 'APIConnectionError') {
     return new AppError(502, 'AI_UNREACHABLE', 'Could not reach the AI service. Please check your connection and try again.');
   }
   if (err?.status === 401 || err?.status === 403) {
-    return new AppError(502, 'AI_AUTH', 'The AI service rejected the server’s API key. Please check the Anthropic key configuration.');
+    return new AppError(502, 'AI_AUTH', 'The AI service rejected the server’s API key. Please check the OpenAI key configuration.');
   }
-  if (err?.status === 429 || err?.status === 529) {
+  if (err?.status === 429) {
     return new AppError(429, 'AI_RATE_LIMIT', 'The AI service is busy or the usage quota has been reached. Please try again in a moment.');
   }
   return new AppError(502, 'AI_ERROR', 'The AI service could not process this request. Please try again.');
@@ -100,7 +94,7 @@ export function mapAIError(err) {
  * Enhance a Markdown deck with one of the predefined actions.
  * @param {string} markdown validated deck content
  * @param {string} action key of ACTIONS
- * @param {{ client?: { beta: { messages: { stream: Function } } } }} [deps] injectable for tests
+ * @param {{ client?: { chat: { completions: { create: Function } } } }} [deps] injectable for tests
  * @returns {Promise<{ markdown: string, action: string, model: string }>}
  */
 export async function enhanceMarkdown(markdown, action, { client } = {}) {
@@ -115,35 +109,22 @@ export async function enhanceMarkdown(markdown, action, { client } = {}) {
   }
 
   const model = getModel();
-  const fallback = FALLBACK_MODELS.has(model) ? { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' } : {};
-  let message;
+  let completion;
   try {
-    // Streaming keeps long outputs (such as "expand") clear of HTTP timeouts.
-    message = await (client ?? getClient()).beta.messages
-      .stream({
-        model,
-        max_tokens: MAX_OUTPUT_TOKENS,
-        output_config: { effort: 'medium' },
-        system: FORMAT_RULES,
-        messages: [{ role: 'user', content: `Task: ${task.instruction}\n\n<deck>\n${markdown}\n</deck>` }],
-        ...fallback,
-      })
-      .finalMessage();
+    completion = await (client ?? getClient()).chat.completions.create({
+      model,
+      temperature: 0.4,
+      messages: [
+        { role: 'system', content: FORMAT_RULES },
+        { role: 'user', content: `Task: ${task.instruction}\n\n<deck>\n${markdown}\n</deck>` },
+      ],
+    });
   } catch (err) {
-    throw mapAIError(err);
+    throw mapOpenAIError(err);
   }
 
-  if (message?.stop_reason === 'refusal') {
-    throw new AppError(422, 'AI_REFUSED', 'The AI declined to edit this deck. Try rewording the content or choosing a different enhancement.');
-  }
-  if (message?.stop_reason === 'max_tokens') {
-    throw new AppError(413, 'AI_OUTPUT_TOO_LONG', 'The AI’s answer was too long and got cut off. Try enhancing a shorter part of the deck.');
-  }
-  const output = (message?.content ?? [])
-    .filter((block) => block.type === 'text')
-    .map((block) => block.text)
-    .join('');
-  if (output.trim() === '') {
+  const output = completion?.choices?.[0]?.message?.content;
+  if (typeof output !== 'string' || output.trim() === '') {
     throw new AppError(502, 'AI_EMPTY', 'The AI service returned an empty response. Please try again.');
   }
   return { markdown: stripWrappingFence(output), action, model };
