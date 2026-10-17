@@ -1,0 +1,21 @@
+{
+  "name": "slidecraft",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Turn Markdown into beautiful slide presentations, with AI enhancements.",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @slidecraft/web",
+    "build": "npm run build -w @slidecraft/web",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
