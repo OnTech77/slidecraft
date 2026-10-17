@@ -49,7 +49,8 @@ export function toSafeError(err) {
 /** Express error middleware: log full details server-side, send only safe details to the client. */
 export function errorHandler(err, req, res, _next) {
   const { status, body } = toSafeError(err);
-  if (status >= 500) {
+  // AppErrors are expected outcomes; anything else is a bug worth the full stack trace.
+  if (status >= 500 && !(err instanceof AppError)) {
     console.error(`[${req.method} ${req.originalUrl}]`, err);
   }
   if (res.headersSent) {

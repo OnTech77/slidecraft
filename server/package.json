@@ -31,7 +31,8 @@
     "jsdom": "^29.1.1",
     "marked": "^18.1.1",
     "multer": "^2.4.0",
-    "openai": "^7.36.0"
+    "openai": "^7.36.0",
+    "puppeteer": "^25.14.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
