@@ -159,8 +159,10 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <div className="brand">
-          <img src="/favicon.svg" alt="" width="28" height="28" />
-          <span>Slidecraft</span>
+          <img src="/favicon.svg" alt="" width="30" height="30" />
+          <span className="brand-name">
+            Slide<em>craft</em>
+          </span>
         </div>
         <Stepper steps={STEPS} current={step} onChange={setStep} />
       </header>
@@ -176,6 +178,9 @@ export default function App() {
       <main className="workspace">
         <aside className="panel">
           <div className="panel-section">
+            <span className="eyebrow">
+              Step {stepIndex + 1} of {STEPS.length}
+            </span>
             <h1 className="panel-title">{stepInfo.title}</h1>
             <p className="muted">{stepInfo.description}</p>
           </div>
