@@ -1,6 +1,7 @@
 import { Marked } from 'marked';
 import createDOMPurify from 'dompurify';
 import { JSDOM } from 'jsdom';
+import { fitSlide, splitSections } from './slideFitter.js';
 
 const marked = new Marked({ gfm: true, breaks: false });
 
@@ -76,10 +77,17 @@ export function extractFrontMatter(text) {
   return { meta, body: lines.slice(end + 1).join('\n') };
 }
 
-/** Split a Markdown body into raw slide sources on `---` lines outside code blocks. */
+/**
+ * Split a Markdown body into raw slide sources on `---` lines outside code blocks.
+ * A document without any `---` lines (such as an uploaded article or README) is split
+ * into one slide per `#`/`##` section instead.
+ */
 export function splitSlides(body) {
+  const lines = annotateLines(body);
+  if (!lines.some(({ line, inCode }) => !inCode && SLIDE_SEPARATOR.test(line))) return splitSections(lines);
+
   const slides = [[]];
-  for (const { line, inCode } of annotateLines(body)) {
+  for (const { line, inCode } of lines) {
     if (!inCode && SLIDE_SEPARATOR.test(line)) {
       slides.push([]);
     } else {
@@ -112,8 +120,13 @@ function plainText(html) {
 export function parseMarkdown(markdown) {
   const { meta, body } = extractFrontMatter(markdown);
 
-  const slides = splitSlides(body).map((source, index) => {
+  // Slides with more content than fits are split into continuation slides; notes stay on the first one.
+  const pieces = splitSlides(body).flatMap((source) => {
     const { content, notes } = extractNotes(source);
+    return fitSlide(content).map((piece, i) => ({ content: piece, notes: i === 0 ? notes : '' }));
+  });
+
+  const slides = pieces.map(({ content, notes }, index) => {
     const html = sanitizeHtml(marked.parse(content));
     const heading = JSDOM.fragment(html).querySelector('h1, h2, h3, h4, h5, h6');
     return {

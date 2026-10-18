@@ -32,6 +32,12 @@
   box-sizing: border-box;
 }
 
+/* Long words and URLs wrap instead of running off the slide. */
+.sc-slide-content {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .sc-slide-content > * {
   margin: 0 0 24px;
 }
