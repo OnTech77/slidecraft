@@ -205,6 +205,9 @@ export default function App() {
             <AIEnhancePanel
               aiStatus={aiStatus}
               markdown={markdown}
+              slides={slides}
+              currentSlide={current}
+              onSelectSlide={setCurrentSlide}
               onApply={handleApplyAI}
               onError={showError}
               onRefreshStatus={refreshAIStatus}

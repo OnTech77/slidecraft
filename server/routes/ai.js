@@ -32,5 +32,6 @@ aiRouter.get('/status', async (req, res) => {
 
 aiRouter.post('/enhance', aiLimiter, async (req, res) => {
   const markdown = validateMarkdown(req.body?.markdown);
-  res.json(await enhanceMarkdown(markdown, req.body?.action, { provider: req.body?.provider }));
+  const { action, provider, slide, instruction } = req.body ?? {};
+  res.json(await enhanceMarkdown(markdown, action, { provider, slide, instruction }));
 });

@@ -126,6 +126,14 @@ describe('parseMarkdown', () => {
     assert.equal(slides[1].id, 'slide-2');
   });
 
+  it('records which written slide each preview slide came from', () => {
+    const long = Array.from({ length: 30 }, (_, i) => `- Point number ${i + 1} with some words`).join('\n');
+    const { slides } = parseMarkdown(`# Intro\n---\n## List\n${long}\n---\n## End`);
+    assert.ok(slides.length > 3, 'the long slide should be split');
+    assert.deepEqual([...new Set(slides.map((s) => s.source))], [0, 1, 2]);
+    assert.equal(slides.at(-1).source, 2);
+  });
+
   it('strips scripts, event handlers, styles and javascript: links', () => {
     const { slides } = parseMarkdown(
       '# Hi\n<script>alert(1)</script>\n<img src="x" onerror="alert(1)">\n<p style="color:red">x</p>\n\n[bad](javascript:alert(1))\n\n<iframe src="https://evil.test"></iframe>',

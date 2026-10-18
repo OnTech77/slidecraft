@@ -747,6 +747,15 @@ code {
   font-size: 12px;
 }
 
+.transition-options.scope-options {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ai-request {
+  resize: vertical;
+  min-height: 72px;
+}
+
 .ai-unavailable {
   display: flex;
   flex-wrap: wrap;

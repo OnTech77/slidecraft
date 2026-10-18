@@ -115,23 +115,26 @@ function plainText(html) {
 /**
  * Parse a Markdown document into deck metadata and slides.
  * @param {string} markdown
- * @returns {{ meta: Record<string,string>, slides: Array<{ id: string, index: number, markdown: string, html: string, notes: string, title: string }> }}
+ * `source` is the index of the slide in the Markdown that each slide came from (several slides
+ * share one when a long slide is split), so edits can target the slide as written.
+ * @returns {{ meta: Record<string,string>, slides: Array<{ id: string, index: number, source: number, markdown: string, html: string, notes: string, title: string }> }}
  */
 export function parseMarkdown(markdown) {
   const { meta, body } = extractFrontMatter(markdown);
 
   // Slides with more content than fits are split into continuation slides; notes stay on the first one.
-  const pieces = splitSlides(body).flatMap((source) => {
-    const { content, notes } = extractNotes(source);
-    return fitSlide(content).map((piece, i) => ({ content: piece, notes: i === 0 ? notes : '' }));
+  const pieces = splitSlides(body).flatMap((text, source) => {
+    const { content, notes } = extractNotes(text);
+    return fitSlide(content).map((piece, i) => ({ content: piece, notes: i === 0 ? notes : '', source }));
   });
 
-  const slides = pieces.map(({ content, notes }, index) => {
+  const slides = pieces.map(({ content, notes, source }, index) => {
     const html = sanitizeHtml(marked.parse(content));
     const heading = JSDOM.fragment(html).querySelector('h1, h2, h3, h4, h5, h6');
     return {
       id: `slide-${index + 1}`,
       index,
+      source,
       markdown: content,
       html,
       notes,

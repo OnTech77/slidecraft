@@ -115,6 +115,70 @@ describe('speaker notes + presenter script', () => {
   });
 });
 
+describe('enhancing one slide', () => {
+  const deck = '---\ntitle: Demo\n---\n\n# Welcome\n\n---\n\n## Results\n\n- up\n\nNote: keep me\n\n---\n\n## End';
+
+  it('sends only the chosen slide, with an outline, and changes nothing else', async () => {
+    const client = fakeClient(answer('## Results\n\n- Revenue grew 20%\n\nNote: keep me'));
+    const result = await enhanceMarkdown(deck, 'improve', { slide: 1, client });
+    const userMessage = client.calls[0].messages.at(-1).content;
+    assert.match(userMessage, /<slide n="2">\n## Results\n\n- up\n\nNote: keep me\n<\/slide>/);
+    assert.match(userMessage, /2\. Results {2}<- this slide/);
+    assert.doesNotMatch(userMessage, /<slide n="1">/);
+    assert.match(userMessage, /Improve the wording of this slide/);
+
+    assert.equal(
+      result.markdown,
+      '---\ntitle: Demo\n---\n\n# Welcome\n\n---\n\n## Results\n\n- Revenue grew 20%\n\nNote: keep me\n\n---\n\n## End\n',
+    );
+    assert.deepEqual(result.slide, { index: 1, before: '## Results\n\n- up\n\nNote: keep me', after: '## Results\n\n- Revenue grew 20%\n\nNote: keep me' });
+  });
+
+  it('writes notes for the chosen slide only, whatever number the model gives it', async () => {
+    const client = fakeClient(answer(JSON.stringify({ slides: [{ slide: 1, notes: 'Wrap up.', question: 'What will you try first?' }] })));
+    const result = await enhanceMarkdown(deck, 'notes', { slide: 2, client });
+    assert.match(client.calls[0].messages.at(-1).content, /<slide n="3">\n## End\n<\/slide>/);
+    assert.match(result.markdown, /# Welcome\n\n---/);
+    assert.match(result.markdown, /Note: keep me/);
+    assert.match(result.markdown, /## End\n\nNote: Wrap up\.\nQuestion for the audience: What will you try first\?\n$/);
+  });
+
+  it('passes a custom request and requires one', async () => {
+    const client = fakeClient(answer('# Welcome!'));
+    await enhanceMarkdown(deck, 'custom', { slide: 0, instruction: '  Add an exclamation mark  ', client });
+    assert.match(client.calls[0].messages.at(-1).content, /<request>\nAdd an exclamation mark\n<\/request>/);
+
+    await assert.rejects(enhanceMarkdown(deck, 'custom', { slide: 0, instruction: ' ', client }), { code: 'MISSING_INSTRUCTION' });
+    await assert.rejects(enhanceMarkdown(deck, 'custom', { instruction: 'x'.repeat(1001), client }), { code: 'INSTRUCTION_TOO_LONG' });
+  });
+
+  it('keeps the slide notes as they were, unless the request is about notes', async () => {
+    const chatty = answer('## Results\n\n- Up a lot\n\nNote: I made the bullet more specific.');
+    const improved = await enhanceMarkdown(deck, 'improve', { slide: 1, client: fakeClient(chatty) });
+    assert.equal(improved.slide.after, '## Results\n\n- Up a lot\n\nNote: keep me');
+    const welcome = await enhanceMarkdown(deck, 'custom', {
+      slide: 0,
+      instruction: 'Add a subtitle',
+      client: fakeClient(answer('# Welcome\n\nGlad you came\n\nNote: Added a subtitle.')),
+    });
+    assert.equal(welcome.slide.after, '# Welcome\n\nGlad you came');
+    const notes = await enhanceMarkdown(deck, 'custom', {
+      slide: 1,
+      instruction: 'Rewrite the notes to be funnier',
+      client: fakeClient(answer('## Results\n\n- up\n\nNote: Numbers go brrr.')),
+    });
+    assert.match(notes.slide.after, /Note: Numbers go brrr\.$/);
+  });
+
+  it('rejects slides that do not exist', async () => {
+    const client = fakeClient(answer('x'));
+    await assert.rejects(enhanceMarkdown(deck, 'improve', { slide: 3, client }), { code: 'INVALID_SLIDE' });
+    await assert.rejects(enhanceMarkdown(deck, 'improve', { slide: -1, client }), { code: 'INVALID_SLIDE' });
+    await assert.rejects(enhanceMarkdown(deck, 'improve', { slide: '1', client }), { code: 'INVALID_SLIDE' });
+    assert.equal(client.calls.length, 0);
+  });
+});
+
 describe('AI providers', () => {
   it('uses the Ollama model when the local provider is chosen', async () => {
     const client = fakeClient(answer('# Better'));

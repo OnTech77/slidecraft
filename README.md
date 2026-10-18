@@ -11,7 +11,7 @@ Write or upload Markdown, watch your slides update in real time, pick a theme, l
 - **Themes**: Default, Midnight, Corporate, Sunset and Editorial, previewed on your own slides
 - **Present in the browser**: the **Present** button opens a clean full-screen presenter in a new tab, with slide transitions (slide, fade, zoom), content that animates in piece by piece, speaker notes and keyboard, click and swipe controls. It follows your edits live.
 - **Images and tables look good automatically**: a slide with just an image shows it large with its alt text as a caption, several images become a gallery, one image next to text goes side by side, and tables get striped rows with number columns aligned right
-- **AI enhancements**, with the **OpenAI API** or a **local model through [Ollama](https://ollama.com)** (chosen from a menu): improve wording, make concise, speaker notes + presenter script (brief notes and one rhetorical question per slide), improve titles, expand an outline. You review a before/after comparison before anything changes, and can undo it.
+- **AI enhancements**, with the **OpenAI API** or a **local model through [Ollama](https://ollama.com)** (chosen from a menu): improve wording, make concise, speaker notes + presenter script (brief notes and one rhetorical question per slide), improve titles, expand an outline, or a custom request in your own words. Run them on the **whole deck** or on **one slide** (only that slide changes, and its speaker notes are kept). You review a before/after comparison before anything changes, and can undo it.
 - **Long content fits automatically**: documents without `---` are split into one slide per `#`/`##` section, and slides with too much content continue on extra "(continued)" slides, so text never runs off a slide
 - **Export**: PDF (one 16:9 page per slide, rendered by headless Chrome using the same CSS as the preview), a standalone HTML page, Slidecraft Markdown or JSON
 
@@ -155,8 +155,10 @@ All endpoints are under `/api`. Errors always look like `{ "error": { "code": ".
 | POST | `/slides/parse` | `{ markdown, theme? }` | Presentation (`title`, `theme`, `slides[]`) |
 | POST | `/slides/upload` | multipart `file` (.md) | `{ filename, markdown, presentation }` |
 | GET | `/ai/status` | | `{ configured, defaultProvider, providers[], actions[] }` |
-| POST | `/ai/enhance` | `{ markdown, action, provider? }` (`openai` or `ollama`) | `{ markdown, action, provider, model }` |
+| POST | `/ai/enhance` | `{ markdown, action, provider?, slide?, instruction? }` | `{ markdown, action, provider, model, slide? }` |
 | POST | `/export/:format` | `{ markdown, theme?, transition?, filename? }` | File download; `format` is `pdf`, `html`, `md` or `json` |
+
+`provider` is `openai` or `ollama`. `slide` is the 0-based index of a slide as written in the Markdown (each parsed slide has it as `source`); with it, only that slide is sent and changed, and the response's `slide` holds its `before` and `after`. `instruction` is required for the `custom` action (up to 1,000 characters).
 
 ## Security
 

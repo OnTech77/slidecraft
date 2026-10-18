@@ -3,6 +3,7 @@ import { api, isAbortError } from '../services/api.js';
 import Alert from './Alert.jsx';
 
 const MAX_AI_CHARS = 30_000;
+const MAX_REQUEST_CHARS = 1000;
 const PROVIDER_KEY = 'slidecraft.aiProvider';
 
 const savedProvider = () => {
@@ -22,11 +23,42 @@ const saveProvider = (id) => {
 };
 
 /**
- * Choose an AI action, run it, then review a before/after comparison.
- * Nothing changes in the editor until the user clicks "Apply changes".
+ * The slides as written in the Markdown. A long slide shows as several preview slides
+ * that share one `source`; it is listed once, with the range of preview numbers it covers.
  */
-export default function AIEnhancePanel({ aiStatus, markdown, onApply, onError, canUndo, onUndo, onRefreshStatus }) {
+function sourceSlides(slides) {
+  const list = [];
+  for (const slide of slides) {
+    const last = list.at(-1);
+    if (last?.source === slide.source) last.lastNumber = slide.index + 1;
+    else list.push({ source: slide.source, title: slide.title, firstIndex: slide.index, firstNumber: slide.index + 1, lastNumber: slide.index + 1 });
+  }
+  return list;
+}
+
+const slideLabel = (s) =>
+  `${s.firstNumber === s.lastNumber ? `Slide ${s.firstNumber}` : `Slides ${s.firstNumber}–${s.lastNumber}`}: ${s.title || 'Untitled'}`;
+
+/**
+ * Choose an AI action for the whole deck or one slide, run it, then review a before/after comparison.
+ * Nothing changes in the editor until the user clicks "Apply changes".
+ * The chosen slide is the one shown in the preview, so picking a slide here also moves the preview.
+ */
+export default function AIEnhancePanel({
+  aiStatus,
+  markdown,
+  slides = [],
+  currentSlide = 0,
+  onSelectSlide,
+  onApply,
+  onError,
+  canUndo,
+  onUndo,
+  onRefreshStatus,
+}) {
   const [action, setAction] = useState('improve');
+  const [scope, setScope] = useState('deck');
+  const [request, setRequest] = useState('');
   const [providerChoice, setProviderChoice] = useState(savedProvider);
   const [checking, setChecking] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -64,8 +96,20 @@ export default function AIEnhancePanel({ aiStatus, markdown, onApply, onError, c
       setChecking(false);
     }
   };
+
+  const perSlide = scope === 'slide';
+  const sources = sourceSlides(slides);
+  const selected = sources.find((s) => s.source === slides[currentSlide]?.source) ?? sources[0] ?? null;
+  const actions = aiStatus.actions.map((a) =>
+    perSlide ? { ...a, label: a.slideLabel ?? a.label, description: a.slideDescription ?? a.description } : a,
+  );
+  const chosen = actions.find((a) => a.id === action) ?? actions[0];
+  const needsRequest = Boolean(chosen?.custom);
+
   const empty = markdown.trim() === '';
-  const tooLong = markdown.length > MAX_AI_CHARS;
+  const tooLong = !perSlide && markdown.length > MAX_AI_CHARS;
+  const missingSlide = perSlide && !selected;
+  const missingRequest = needsRequest && request.trim() === '';
 
   const run = async () => {
     const controller = new AbortController();
@@ -73,8 +117,19 @@ export default function AIEnhancePanel({ aiStatus, markdown, onApply, onError, c
     setLoading(true);
     setResult(null);
     try {
-      const response = await api.enhance(markdown, action, { provider: provider?.id, signal: controller.signal });
-      setResult({ before: markdown, after: response.markdown, action, model: response.model });
+      const response = await api.enhance(markdown, action, {
+        provider: provider?.id,
+        slide: perSlide ? selected.source : undefined,
+        instruction: needsRequest ? request.trim() : undefined,
+        signal: controller.signal,
+      });
+      setResult({
+        before: markdown,
+        after: response.markdown,
+        label: chosen.label,
+        model: response.model,
+        slide: response.slide && { ...response.slide, name: slideLabel(selected) },
+      });
     } catch (err) {
       if (!isAbortError(err)) onError(err.message);
     } finally {
@@ -83,15 +138,24 @@ export default function AIEnhancePanel({ aiStatus, markdown, onApply, onError, c
     }
   };
 
-  const actionLabel = (id) => aiStatus.actions.find((a) => a.id === id)?.label ?? id;
-
   if (result) {
     const unchanged = result.before === result.after;
+    // For one slide, compare just that slide; the rest of the deck is unchanged.
+    const before = result.slide ? result.slide.before : result.before;
+    const after = result.slide ? result.slide.after : result.after;
     return (
       <div className="ai-result">
         <Alert type="info">
-          Review the <strong>{actionLabel(result.action)}</strong> result from {result.model} below. Your slides only change when you apply
-          it.
+          Review the <strong>{result.label}</strong> result from {result.model}
+          {result.slide ? (
+            <>
+              {' '}
+              for <strong>{result.slide.name}</strong>. Only this slide changes
+            </>
+          ) : (
+            '. Your slides only change'
+          )}{' '}
+          when you apply it.
         </Alert>
         {unchanged && <Alert type="warning">The AI did not suggest any changes.</Alert>}
         {result.before !== markdown && (
@@ -100,11 +164,11 @@ export default function AIEnhancePanel({ aiStatus, markdown, onApply, onError, c
         <div className="compare">
           <div className="compare-column">
             <span className="label">Before</span>
-            <pre className="compare-text">{result.before}</pre>
+            <pre className="compare-text">{before}</pre>
           </div>
           <div className="compare-column">
             <span className="label">After</span>
-            <pre className="compare-text compare-text--after">{result.after}</pre>
+            <pre className="compare-text compare-text--after">{after}</pre>
           </div>
         </div>
         <div className="button-group">
@@ -168,9 +232,60 @@ export default function AIEnhancePanel({ aiStatus, markdown, onApply, onError, c
         </Alert>
       )}
 
+      <div className="field">
+        <span className="label" id="ai-scope-label">
+          Enhance
+        </span>
+        <div className="transition-options scope-options" role="radiogroup" aria-labelledby="ai-scope-label">
+          {[
+            ['deck', 'Whole deck'],
+            ['slide', 'One slide'],
+          ].map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={scope === id}
+              className={`transition-option ${scope === id ? 'is-active' : ''}`}
+              onClick={() => setScope(id)}
+              disabled={loading}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {perSlide && (
+        <div className="field">
+          <label htmlFor="ai-slide" className="label">
+            Slide
+          </label>
+          <select
+            id="ai-slide"
+            className="input"
+            value={selected?.source ?? ''}
+            onChange={(e) => {
+              const pick = sources.find((s) => s.source === Number(e.target.value));
+              if (pick) onSelectSlide?.(pick.firstIndex);
+            }}
+            disabled={loading || sources.length === 0}
+          >
+            {sources.map((s) => (
+              <option key={s.source} value={s.source}>
+                {slideLabel(s)}
+              </option>
+            ))}
+          </select>
+          <span className="muted field-hint">
+            {sources.length === 0 ? 'Add some slides first.' : 'You can also pick a slide by clicking it in the preview. Other slides are not changed.'}
+          </span>
+        </div>
+      )}
+
       <fieldset className="ai-actions" disabled={!configured || loading}>
         <legend className="label">What should the AI do?</legend>
-        {aiStatus.actions.map((a) => (
+        {actions.map((a) => (
           <label key={a.id} className={`ai-action ${action === a.id ? 'is-active' : ''}`}>
             <input type="radio" name="ai-action" value={a.id} checked={action === a.id} onChange={() => setAction(a.id)} />
             <span>
@@ -181,14 +296,39 @@ export default function AIEnhancePanel({ aiStatus, markdown, onApply, onError, c
         ))}
       </fieldset>
 
+      {needsRequest && (
+        <div className="field">
+          <label htmlFor="ai-request" className="label">
+            {perSlide ? 'What does this slide need?' : 'What should change?'}
+          </label>
+          <textarea
+            id="ai-request"
+            className="input ai-request"
+            rows={3}
+            maxLength={MAX_REQUEST_CHARS}
+            value={request}
+            onChange={(e) => setRequest(e.target.value)}
+            placeholder={
+              perSlide ? 'For example: add a real-world example, turn the bullets into a table, or make it friendlier.' : 'For example: make the tone more formal.'
+            }
+            disabled={!configured || loading}
+          />
+        </div>
+      )}
+
       <div className="button-group">
-        <button type="button" className="btn btn-primary" onClick={run} disabled={!configured || empty || tooLong || loading}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={run}
+          disabled={!configured || empty || tooLong || missingSlide || missingRequest || loading}
+        >
           {loading ? (
             <>
               <span className="spinner" aria-hidden="true" /> {local ? 'Running on this computer…' : 'Enhancing…'}
             </>
           ) : (
-            `✨ ${actionLabel(action)}`
+            `✨ ${chosen?.label ?? 'Enhance'}${perSlide && selected ? ` · ${selected.firstNumber === selected.lastNumber ? `slide ${selected.firstNumber}` : `slides ${selected.firstNumber}–${selected.lastNumber}`}` : ''}`
           )}
         </button>
         {loading && (
