@@ -69,6 +69,6 @@ export const api = {
 
   enhance: (markdown, action, { signal } = {}) => request('/api/ai/enhance', { method: 'POST', json: { markdown, action }, signal }),
 
-  exportPdf: (markdown, theme, filename) =>
-    request('/api/export/pdf', { method: 'POST', json: { markdown, theme, filename }, as: 'blob' }),
+  exportDeck: (format, markdown, theme, filename) =>
+    request(`/api/export/${format}`, { method: 'POST', json: { markdown, theme, filename }, as: 'blob' }),
 };

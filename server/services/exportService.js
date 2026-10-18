@@ -106,15 +106,15 @@ export async function exportPdf(presentation) {
   }
 }
 
-/** Turn a user-provided name into a safe PDF file name. */
-export function pdfFilename(name) {
+/** Turn a user-provided name into a safe file name with the given extension. */
+export function exportFilename(name, extension) {
   const base = String(name ?? '')
-    .replace(/\.pdf$/i, '')
+    .replace(/\.(pdf|html?|json|md|markdown)$/i, '')
     .normalize('NFKD')
     .replace(/[^\w\- ]+/g, '')
     .trim()
     .replace(/[\s-]+/g, '-')
     .replace(/^-|-$/g, '')
     .slice(0, 80);
-  return `${base || 'presentation'}.pdf`;
+  return `${base || 'presentation'}.${extension}`;
 }

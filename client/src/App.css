@@ -868,6 +868,23 @@ code {
   font-size: 12px;
 }
 
+.export-formats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.export-formats legend {
+  margin-bottom: 8px;
+}
+
+.export-formats:disabled {
+  opacity: 0.6;
+}
+
 /* ---------- Crash screen ---------- */
 .crash {
   max-width: 480px;

@@ -53,16 +53,21 @@ const escapeHtml = (text) =>
   String(text).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
 /**
- * Build a standalone HTML document for a presentation, used for PDF export.
+ * Build a standalone HTML document for a presentation, used for the PDF and HTML exports.
  * Slide HTML is already sanitized by the parser.
+ * @param {object} presentation
+ * @param {{ extraCss?: string, script?: string, wrapSlide?: (slideHtml: string, slide: object) => string }} [options]
  */
-export function buildPresentationHtml(presentation) {
+export function buildPresentationHtml(presentation, { extraCss = '', script = '', wrapSlide = (slideHtml) => slideHtml } = {}) {
   const sections = presentation.slides
-    .map(
-      (slide, i) => `<section class="sc-slide sc-slide--${slide.layout}">
+    .map((slide, i) =>
+      wrapSlide(
+        `<section class="sc-slide sc-slide--${slide.layout}">
   <div class="sc-slide-content">${slide.html}</div>
   <div class="sc-slide-number">${i + 1}</div>
 </section>`,
+        slide,
+      ),
     )
     .join('\n');
 
@@ -70,17 +75,21 @@ export function buildPresentationHtml(presentation) {
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(presentation.title)}</title>
 <style>
 @page { size: 1280px 720px; margin: 0; }
 html, body { margin: 0; padding: 0; }
 .sc-slide { break-after: page; page-break-after: always; }
-.sc-slide:last-child { break-after: auto; page-break-after: auto; }
+.sc-slide:last-child, .sc-deck > :last-child .sc-slide { break-after: auto; page-break-after: auto; }
 ${getThemeCss(presentation.theme)}
+${extraCss}
 </style>
 </head>
 <body class="sc-theme-${presentation.theme}">
+<main class="sc-deck">
 ${sections}
+</main>${script ? `\n<script>${script}\n</script>` : ''}
 </body>
 </html>`;
 }

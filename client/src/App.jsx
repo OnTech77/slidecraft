@@ -16,7 +16,7 @@ const STEPS = [
   { id: 'write', label: 'Write', title: 'Write your slides', description: 'Type or paste Markdown, or upload a file. The preview updates as you type.' },
   { id: 'theme', label: 'Theme', title: 'Choose a theme', description: 'Pick a look for your deck. You can change it at any time.' },
   { id: 'enhance', label: 'Enhance', title: 'Enhance with AI', description: 'Let AI polish your content. You review every change before it is applied.' },
-  { id: 'export', label: 'Export', title: 'Export your deck', description: 'Download your slides as a PDF, ready to present or share.' },
+  { id: 'export', label: 'Export', title: 'Export your deck', description: 'Download your slides as a PDF, a web page, Markdown or JSON.' },
 ];
 
 export default function App() {
