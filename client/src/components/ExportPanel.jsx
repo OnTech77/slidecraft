@@ -37,7 +37,7 @@ function downloadBlob(blob, filename) {
 }
 
 /** Summary of the deck, a choice of export format and a download button. */
-export default function ExportPanel({ markdown, presentation, theme, themes, onError, onSuccess }) {
+export default function ExportPanel({ markdown, presentation, theme, transition, themes, onError, onSuccess }) {
   const [name, setName] = useState(presentation.title || 'presentation');
   const [formatId, setFormatId] = useState('pdf');
   const [exporting, setExporting] = useState(false);
@@ -50,7 +50,7 @@ export default function ExportPanel({ markdown, presentation, theme, themes, onE
   const handleExport = async () => {
     setExporting(true);
     try {
-      const blob = await api.exportDeck(format.id, markdown, theme, filename);
+      const blob = await api.exportDeck(format.id, { markdown, theme, transition, filename });
       downloadBlob(blob, filename);
       onSuccess(`Downloaded ${filename}.`);
     } catch (err) {

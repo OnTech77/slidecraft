@@ -9,6 +9,8 @@ Write or upload Markdown, watch your slides update in real time, pick a theme, l
 - **Write or upload**: type in the editor or drop in a `.md` file (up to 10 MB)
 - **Real-time preview**: slides re-render as you type, with thumbnails, keyboard navigation and speaker notes
 - **Themes**: Default, Midnight, Corporate, Sunset and Editorial, previewed on your own slides
+- **Present in the browser**: the **Present** button opens a clean full-screen presenter in a new tab, with slide transitions (slide, fade, zoom), content that animates in piece by piece, speaker notes and keyboard, click and swipe controls. It follows your edits live.
+- **Images and tables look good automatically**: a slide with just an image shows it large with its alt text as a caption, several images become a gallery, one image next to text goes side by side, and tables get striped rows with number columns aligned right
 - **AI enhancements** (OpenAI): improve wording, make concise, add speaker notes, improve titles, expand an outline. You review a before/after comparison before anything changes, and can undo it.
 - **Long content fits automatically**: documents without `---` are split into one slide per `#`/`##` section, and slides with too much content continue on extra "(continued)" slides, so text never runs off a slide
 - **Export**: PDF (one 16:9 page per slide, rendered by headless Chrome using the same CSS as the preview), a standalone HTML page, Slidecraft Markdown or JSON
@@ -70,14 +72,31 @@ Note: Speaker notes go after a line starting with "Note:".
 | Syntax | Meaning |
 | --- | --- |
 | `---` on its own line | Starts a new slide (ignored inside code blocks). A file with no `---` lines gets one slide per `#`/`##` heading instead |
-| Front matter at the top | `title`, `author` and `theme` (`default`, `midnight`, `corporate`, `sunset`, `editorial`) |
+| Front matter at the top | `title`, `author`, `theme` (`default`, `midnight`, `corporate`, `sunset`, `editorial`) and `transition` (`slide`, `fade`, `zoom`, `none`) |
 | `Note:` line | Everything after it on that slide becomes speaker notes |
 | `#` heading + short text | Becomes a centered title slide |
 | A `>` quote | Becomes a quote slide |
+| Only images (plus a heading) | Image slide: the image fills the slide, its alt text is the caption; 2 to 6 images become a gallery |
+| One image and some text | Media slide: text on the left, image on the right |
 
 Standard Markdown works too: lists, **bold**, *italic*, links, images, tables and code blocks.
 
 If a slide has more content than fits, it is split automatically between list items, table rows (the header repeats), code lines or sentences, and the extra slides repeat the heading with "(continued)". A heading is never left alone at the bottom of a slide. The Markdown export saves the deck already split, exactly as you see it.
+
+## Presenting
+
+Click **Present** above the slide preview. A new tab opens with just your slides:
+
+| Key | Action |
+| --- | --- |
+| `→` `Space` `Page Down` or click | Next slide |
+| `←` `Page Up` `Backspace` or click the left edge | Previous slide |
+| `Home` / `End` | First / last slide |
+| `F` | Full screen |
+| `N` | Speaker notes |
+| `?` | Keyboard shortcuts |
+
+On touch screens, swipe left or right. The toolbar at the bottom (which hides while you present) also lets you switch the transition. Keep the editor tab open: the presenter gets the slides from it and updates as you edit. Animations are turned off for people who have reduced motion enabled in their system settings.
 
 ## Project structure
 
@@ -104,11 +123,12 @@ slidecraft/
 └─ client/                   React + Vite frontend
    └─ src/
       ├─ App.jsx             State and step-by-step flow
+      ├─ services/presentChannel.js  Sends the deck to the presenter tab
       ├─ services/api.js     API client with friendly errors
       ├─ hooks/useDebounce.js
       └─ components/         MarkdownEditor, FileUpload, SlidePreview, ScaledSlide,
-                             ThemeSelector, AIEnhancePanel, ExportPanel, Stepper,
-                             Alert, ErrorBoundary
+                             ThemeSelector, TransitionPicker, Presenter, AIEnhancePanel,
+                             ExportPanel, Stepper, Alert, ErrorBoundary
 ```
 
 ## API
@@ -125,7 +145,7 @@ All endpoints are under `/api`. Errors always look like `{ "error": { "code": ".
 | POST | `/slides/upload` | multipart `file` (.md) | `{ filename, markdown, presentation }` |
 | GET | `/ai/status` | | `{ configured, model, actions[] }` |
 | POST | `/ai/enhance` | `{ markdown, action }` | `{ markdown, action, model }` |
-| POST | `/export/:format` | `{ markdown, theme?, filename? }` | File download; `format` is `pdf`, `html`, `md` or `json` |
+| POST | `/export/:format` | `{ markdown, theme?, transition?, filename? }` | File download; `format` is `pdf`, `html`, `md` or `json` |
 
 ## Security
 

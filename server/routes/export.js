@@ -32,7 +32,7 @@ exportRouter.post('/:format', exportLimiter, async (req, res) => {
     throw badRequest('That export format is not available. Choose PDF, HTML, Markdown or JSON.', 'UNSUPPORTED_FORMAT');
   }
   const markdown = validateMarkdown(req.body?.markdown);
-  const presentation = generatePresentation(markdown, { theme: req.body?.theme });
+  const presentation = generatePresentation(markdown, { theme: req.body?.theme, transition: req.body?.transition });
   if (!presentation.slides.length) {
     throw badRequest('There are no slides to export yet. Add some Markdown content first.', 'NO_SLIDES');
   }

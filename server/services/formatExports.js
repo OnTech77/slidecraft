@@ -43,6 +43,7 @@ export function buildJson(presentation) {
   const data = {
     title: presentation.title,
     theme: presentation.theme,
+    transition: presentation.transition,
     meta: presentation.meta,
     slideCount: presentation.slides.length,
     slides: presentation.slides.map((slide, i) => ({
@@ -62,7 +63,7 @@ export function buildJson(presentation) {
  * they appear in the preview (long slides already split). Importing it gives the same deck.
  */
 export function buildMarkdown(presentation) {
-  const meta = { ...presentation.meta, title: presentation.title, theme: presentation.theme };
+  const meta = { ...presentation.meta, title: presentation.title, theme: presentation.theme, transition: presentation.transition };
   const frontMatter = Object.entries(meta)
     .filter(([, value]) => value !== undefined && value !== '')
     .map(([key, value]) => `${key}: ${String(value).replace(/\s+/g, ' ')}`)

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, isAbortError } from './services/api.js';
 import { useDebounce } from './hooks/useDebounce.js';
 import MarkdownEditor from './components/MarkdownEditor.jsx';
@@ -9,12 +9,14 @@ import Stepper from './components/Stepper.jsx';
 import ThemeSelector from './components/ThemeSelector.jsx';
 import AIEnhancePanel from './components/AIEnhancePanel.jsx';
 import ExportPanel from './components/ExportPanel.jsx';
+import TransitionPicker from './components/TransitionPicker.jsx';
+import { presenterUrl, useDeckBroadcast } from './services/presentChannel.js';
 
-const EMPTY_PRESENTATION = { title: '', theme: 'default', slides: [] };
+const EMPTY_PRESENTATION = { title: '', theme: 'default', transition: 'slide', slides: [] };
 
 const STEPS = [
   { id: 'write', label: 'Write', title: 'Write your slides', description: 'Type or paste Markdown, or upload a file. The preview updates as you type.' },
-  { id: 'theme', label: 'Theme', title: 'Choose a theme', description: 'Pick a look for your deck. You can change it at any time.' },
+  { id: 'theme', label: 'Theme', title: 'Choose a theme', description: 'Pick a look and a slide transition for your deck. You can change them at any time.' },
   { id: 'enhance', label: 'Enhance', title: 'Enhance with AI', description: 'Let AI polish your content. You review every change before it is applied.' },
   { id: 'export', label: 'Export', title: 'Export your deck', description: 'Download your slides as a PDF, a web page, Markdown or JSON.' },
 ];
@@ -32,6 +34,7 @@ export default function App() {
   const [themes, setThemes] = useState([]);
   // null means "use the theme from the deck's front matter".
   const [themeOverride, setThemeOverride] = useState(null);
+  const [transitionOverride, setTransitionOverride] = useState(null);
   const [aiStatus, setAiStatus] = useState(null);
   // Snapshot taken before the last AI change, so it can be undone.
   const [aiUndo, setAiUndo] = useState(null);
@@ -80,6 +83,12 @@ export default function App() {
   const slides = presentation.slides;
   const current = Math.max(0, Math.min(currentSlide, slides.length - 1));
   const theme = themeOverride ?? presentation.theme;
+  const transition = transitionOverride ?? presentation.transition ?? 'slide';
+
+  // Share the deck with presenter tabs, which follow edits live.
+  const presenterDeck = useMemo(() => ({ title: presentation.title, slides, theme, transition }), [presentation.title, slides, theme, transition]);
+  useDeckBroadcast(presenterDeck, current);
+  const handlePresent = () => window.open(presenterUrl(current), '_blank');
   const stepIndex = STEPS.findIndex((s) => s.id === step);
   const stepInfo = STEPS[stepIndex];
 
@@ -90,6 +99,7 @@ export default function App() {
     setFilename(name);
     setCurrentSlide(0);
     setThemeOverride(null);
+    setTransitionOverride(null);
     setAiUndo(null);
     if (parsed) setPresentation(parsed);
   };
@@ -177,7 +187,12 @@ export default function App() {
             </>
           )}
 
-          {step === 'theme' && <ThemeSelector themes={themes} selected={theme} onSelect={setThemeOverride} previewSlide={slides[0]} />}
+          {step === 'theme' && (
+            <>
+              <ThemeSelector themes={themes} selected={theme} onSelect={setThemeOverride} previewSlide={slides[0]} />
+              <TransitionPicker selected={transition} onSelect={setTransitionOverride} />
+            </>
+          )}
 
           {step === 'enhance' && (
             <AIEnhancePanel
@@ -195,6 +210,7 @@ export default function App() {
               markdown={markdown}
               presentation={presentation}
               theme={theme}
+              transition={transition}
               themes={themes}
               onError={showError}
               onSuccess={showSuccess}
@@ -213,7 +229,15 @@ export default function App() {
           </div>
         </aside>
 
-        <SlidePreview slides={slides} theme={theme} current={current} onSelect={setCurrentSlide} loading={parsing} error={parseError} />
+        <SlidePreview
+          slides={slides}
+          theme={theme}
+          current={current}
+          onSelect={setCurrentSlide}
+          onPresent={handlePresent}
+          loading={parsing}
+          error={parseError}
+        />
       </main>
     </div>
   );

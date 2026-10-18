@@ -1,7 +1,8 @@
 import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { startTestServer } from './helpers.js';
-import { buildPresentationHtml, detectLayout, generatePresentation, resolveTheme } from '../services/slideGenerator.js';
+import { arrangeSlide, buildPresentationHtml, detectLayout, generatePresentation, resolveTheme, resolveTransition } from '../services/slideGenerator.js';
+import { parseMarkdown } from '../utils/markdownParser.js';
 
 describe('slideGenerator', () => {
   it('detects title, quote and content layouts', () => {
@@ -16,6 +17,45 @@ describe('slideGenerator', () => {
     assert.equal(resolveTheme(undefined, 'sunset'), 'sunset');
     assert.equal(resolveTheme(undefined, 'nope'), 'default');
     assert.throws(() => resolveTheme('nope'), { code: 'INVALID_THEME' });
+  });
+
+  it('resolves transitions: request > front matter > default', () => {
+    assert.equal(resolveTransition('fade', 'zoom'), 'fade');
+    assert.equal(resolveTransition(undefined, 'Zoom'), 'zoom');
+    assert.equal(resolveTransition(undefined, 'spin'), 'slide');
+    assert.throws(() => resolveTransition('spin'), { code: 'INVALID_TRANSITION' });
+    assert.equal(generatePresentation('---\ntransition: fade\n---\n# Hi').transition, 'fade');
+  });
+
+  const arrange = (markdown) => arrangeSlide(parseMarkdown(markdown).slides[0].html);
+  const IMG = '![A chart](https://example.com/chart.png)';
+
+  it('gives image-only slides the image layout with a captioned figure', () => {
+    const { layout, html } = arrange(`## Results\n\n${IMG}`);
+    assert.equal(layout, 'image');
+    assert.match(html, /<h2>Results<\/h2>\s*<figure class="sc-figure"><img [^>]*><figcaption>A chart<\/figcaption><\/figure>/);
+  });
+
+  it('turns several images into a gallery', () => {
+    const { layout, html } = arrange(`## Photos\n\n${IMG} ${IMG}\n\n${IMG}`);
+    assert.equal(layout, 'image');
+    assert.match(html, /<div class="sc-gallery sc-gallery--3">/);
+    assert.equal(html.match(/<figure/g).length, 3);
+  });
+
+  it('puts one image beside text in the media layout', () => {
+    const { layout, html } = arrange(`## Why\n\n- Fast\n- Simple\n\n${IMG}`);
+    assert.equal(layout, 'media');
+    assert.match(html, /^<h2>Why<\/h2><div class="sc-media"><div class="sc-media-text"><ul>[\s\S]*<\/ul><\/div><figure class="sc-figure">/);
+  });
+
+  it('right-aligns number columns and marks wide tables', () => {
+    const { html } = arrange('| Region | Sales | Growth |\n|---|---|---|\n| North | $1,200 | 12.5% |\n| South | 950 | -3% |');
+    assert.match(html, /<th>Region<\/th>/);
+    assert.match(html, /<th class="sc-num">Sales<\/th>/);
+    assert.equal(html.match(/<td class="sc-num">/g).length, 4);
+    const wide = arrange('| a | b | c | d | e |\n|---|---|---|---|---|\n| 1 | 2 | 3 | 4 | x |').html;
+    assert.match(wide, /<table class="sc-table--wide">/);
   });
 
   it('builds a standalone HTML document with escaped title', () => {

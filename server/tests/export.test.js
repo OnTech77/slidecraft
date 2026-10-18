@@ -30,11 +30,12 @@ describe('exportService helpers', () => {
 
   it('exports Markdown that imports back as the same deck', () => {
     const long = `## Long list\n\n${Array.from({ length: 30 }, (_, i) => `- Point number ${i + 1} with some extra words`).join('\n')}`;
-    const original = generatePresentation(`---\ntitle: Round trip\nauthor: Me\n---\n# Hello\n---\n${long}\n\nNote: say it`, { theme: 'sunset' });
+    const original = generatePresentation(`---\ntitle: Round trip\nauthor: Me\n---\n# Hello\n---\n${long}\n\nNote: say it`, { theme: 'sunset', transition: 'zoom' });
     const markdown = buildMarkdown(original);
-    assert.match(markdown, /^---\ntitle: Round trip\nauthor: Me\ntheme: sunset\n---/);
+    assert.match(markdown, /^---\ntitle: Round trip\nauthor: Me\ntheme: sunset\ntransition: zoom\n---/);
     const reimported = generatePresentation(markdown);
     assert.equal(reimported.theme, 'sunset');
+    assert.equal(reimported.transition, 'zoom');
     assert.deepEqual(
       reimported.slides.map(({ markdown: md, notes, layout }) => ({ md, notes, layout })),
       original.slides.map(({ markdown: md, notes, layout }) => ({ md, notes, layout })),

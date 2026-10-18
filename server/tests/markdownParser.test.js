@@ -80,6 +80,19 @@ describe('splitting long content', () => {
     for (const piece of pieces) assert.doesNotMatch(piece, /#+ [^\n]+$/, piece);
   });
 
+  it('gives images their own slide when they cannot sit beside the text', () => {
+    const story = 'This sentence makes the paragraph long enough to need the full slide width. '.repeat(12);
+    const pieces = fitSlide(`## Story\n\n${story}\n\n![Photo](https://example.com/p.png)\n\nThe end.`);
+    assert.equal(pieces.length, 3);
+    assert.match(pieces[1], /^## Story \(continued\)\n\n!\[Photo\]/);
+    assert.match(pieces[2], /The end\.$/);
+  });
+
+  it('keeps a short slide with one image together for the media layout', () => {
+    const slide = '## Why\n\n- Fast\n- Simple\n\n![Photo](https://example.com/p.png)';
+    assert.deepEqual(fitSlide(slide), [slide]);
+  });
+
   it('keeps speaker notes on the first slide of a split', () => {
     const { slides } = parseMarkdown(`## Long\n\n${bullets(30)}\n\nNote: remember this`);
     assert.ok(slides.length > 1);

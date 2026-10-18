@@ -1,7 +1,7 @@
 import ScaledSlide from './ScaledSlide.jsx';
 
 /** Large view of the current slide, its speaker notes and a strip of thumbnails. */
-export default function SlidePreview({ slides, theme, current, onSelect, loading, error }) {
+export default function SlidePreview({ slides, theme, current, onSelect, onPresent, loading, error }) {
   const count = slides.length;
 
   const handleKeyDown = (event) => {
@@ -38,6 +38,9 @@ export default function SlidePreview({ slides, theme, current, onSelect, loading
           {loading && <span className="preview-updating">Updating…</span>}
         </div>
         <div className="button-group">
+          <button type="button" className="btn btn-primary btn-sm" onClick={onPresent} title="Present in a new tab">
+            ▶ Present
+          </button>
           <button type="button" className="btn btn-ghost btn-icon" onClick={() => onSelect(current - 1)} disabled={current === 0} aria-label="Previous slide">
             ‹
           </button>
