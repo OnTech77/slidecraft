@@ -747,6 +747,13 @@ code {
   font-size: 12px;
 }
 
+.ai-unavailable {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
 .compare {
   display: grid;
   grid-template-columns: 1fr 1fr;

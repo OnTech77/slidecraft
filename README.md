@@ -11,7 +11,7 @@ Write or upload Markdown, watch your slides update in real time, pick a theme, l
 - **Themes**: Default, Midnight, Corporate, Sunset and Editorial, previewed on your own slides
 - **Present in the browser**: the **Present** button opens a clean full-screen presenter in a new tab, with slide transitions (slide, fade, zoom), content that animates in piece by piece, speaker notes and keyboard, click and swipe controls. It follows your edits live.
 - **Images and tables look good automatically**: a slide with just an image shows it large with its alt text as a caption, several images become a gallery, one image next to text goes side by side, and tables get striped rows with number columns aligned right
-- **AI enhancements** (OpenAI): improve wording, make concise, add speaker notes, improve titles, expand an outline. You review a before/after comparison before anything changes, and can undo it.
+- **AI enhancements**, with the **OpenAI API** or a **local model through [Ollama](https://ollama.com)** (chosen from a menu): improve wording, make concise, speaker notes + presenter script (brief notes and one rhetorical question per slide), improve titles, expand an outline. You review a before/after comparison before anything changes, and can undo it.
 - **Long content fits automatically**: documents without `---` are split into one slide per `#`/`##` section, and slides with too much content continue on extra "(continued)" slides, so text never runs off a slide
 - **Export**: PDF (one 16:9 page per slide, rendered by headless Chrome using the same CSS as the preview), a standalone HTML page, Slidecraft Markdown or JSON
 
@@ -34,6 +34,17 @@ npm run dev
 Open http://localhost:5173 and click **Load sample** to try it with [`sample.md`](sample.md).
 
 Without an `OPENAI_API_KEY`, everything except the AI step works, and the AI step explains how to turn it on.
+
+### Local AI with Ollama
+
+To run the AI on your own computer instead (free, and the deck never leaves your machine):
+
+```bash
+ollama pull gemma4:e4b   # once
+ollama serve             # if Ollama is not already running (port 11434)
+```
+
+Then choose **Local model (Ollama)** under **AI model** in the Enhance step. Use `OLLAMA_MODEL` and `OLLAMA_BASE_URL` in `server/.env` to pick another model or address. Local models are slower than OpenAI, and the first request after Ollama starts also waits for the model to load.
 
 ### Production
 
@@ -109,7 +120,7 @@ slidecraft/
 │  ├─ app.js                 Express app: security middleware, routes, error handling
 │  ├─ routes/                slides.js, themes.js, ai.js, export.js
 │  ├─ services/
-│  │  ├─ aiService.js        OpenAI integration and prompt rules
+│  │  ├─ aiService.js        OpenAI and Ollama providers, prompt rules
 │  │  ├─ slideGenerator.js   Markdown → presentation (layouts, themes, export HTML)
 │  │  ├─ exportService.js    PDF rendering with Puppeteer
 │  │  └─ formatExports.js    HTML, Markdown and JSON exports
@@ -143,8 +154,8 @@ All endpoints are under `/api`. Errors always look like `{ "error": { "code": ".
 | GET | `/slides/sample` | | `{ markdown }` |
 | POST | `/slides/parse` | `{ markdown, theme? }` | Presentation (`title`, `theme`, `slides[]`) |
 | POST | `/slides/upload` | multipart `file` (.md) | `{ filename, markdown, presentation }` |
-| GET | `/ai/status` | | `{ configured, model, actions[] }` |
-| POST | `/ai/enhance` | `{ markdown, action }` | `{ markdown, action, model }` |
+| GET | `/ai/status` | | `{ configured, defaultProvider, providers[], actions[] }` |
+| POST | `/ai/enhance` | `{ markdown, action, provider? }` (`openai` or `ollama`) | `{ markdown, action, provider, model }` |
 | POST | `/export/:format` | `{ markdown, theme?, transition?, filename? }` | File download; `format` is `pdf`, `html`, `md` or `json` |
 
 ## Security
@@ -152,7 +163,7 @@ All endpoints are under `/api`. Errors always look like `{ "error": { "code": ".
 - **Uploads**: `.md`/`.markdown` only, one file, 10 MB maximum. Files are kept in memory and never written to disk, and they must be valid UTF-8 text.
 - **Sanitization**: Markdown HTML is cleaned with DOMPurify, which removes scripts, event handlers, inline styles, iframes, forms and `javascript:` links. Control characters are stripped from input.
 - **Errors**: clients only receive friendly messages. Stack traces and provider details are logged on the server only.
-- **AI**: the OpenAI key stays on the server. AI requests are rate limited per IP, and content is limited to 30,000 characters.
+- **AI**: the OpenAI key stays on the server. OpenAI requests are rate limited per IP (local Ollama requests are not, since they cost nothing), and content is limited to 30,000 characters. Model output is only used as text: speaker notes are flattened to plain lines so they can't add slides.
 - **PDF export**: JavaScript is disabled in the render, and only `data:` URLs and public `https://` resources can be loaded, so a deck can't make the server read local files or internal addresses. Exports have timeouts and a rate limit.
 - **HTTP**: helmet security headers (including a Content Security Policy), a CORS allow-list and a 10 MB request body limit.
 
@@ -164,3 +175,6 @@ All endpoints are under `/api`. Errors always look like `{ "error": { "code": ".
 | `CLIENT_ORIGIN` | `http://localhost:5173` | Allowed CORS origin in development |
 | `OPENAI_API_KEY` | (empty) | Enables AI features |
 | `OPENAI_MODEL` | `gpt-4o-mini` | Model used for enhancements |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Address of the local Ollama server |
+| `OLLAMA_MODEL` | `gemma4:e4b` | Local model used when Ollama is chosen |
+| `AI_PROVIDER` | (empty) | Provider selected by default: `openai` or `ollama`. Empty means OpenAI when a key is set, otherwise Ollama |

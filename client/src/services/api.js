@@ -67,7 +67,8 @@ export const api = {
     return request('/api/slides/upload', { method: 'POST', body: form });
   },
 
-  enhance: (markdown, action, { signal } = {}) => request('/api/ai/enhance', { method: 'POST', json: { markdown, action }, signal }),
+  enhance: (markdown, action, { provider, signal } = {}) =>
+    request('/api/ai/enhance', { method: 'POST', json: { markdown, action, provider }, signal }),
 
   exportDeck: (format, { markdown, theme, transition, filename }) =>
     request(`/api/export/${format}`, { method: 'POST', json: { markdown, theme, transition, filename }, as: 'blob' }),

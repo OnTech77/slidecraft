@@ -49,16 +49,23 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [notice]);
 
+  // Re-checked from the Enhance step, so starting Ollama later does not need a page reload.
+  const refreshAIStatus = useCallback(
+    () =>
+      api
+        .getAIStatus()
+        .then(setAiStatus)
+        .catch(() => setAiStatus({ configured: false, providers: [], actions: [] })),
+    [],
+  );
+
   useEffect(() => {
     api
       .getThemes()
       .then(({ themes: list }) => setThemes(list))
       .catch((err) => showError(err.message));
-    api
-      .getAIStatus()
-      .then(setAiStatus)
-      .catch(() => setAiStatus({ configured: false, model: null, actions: [] }));
-  }, [showError]);
+    refreshAIStatus();
+  }, [showError, refreshAIStatus]);
 
   // Real-time preview: re-parse shortly after the user stops typing.
   const debouncedMarkdown = useDebounce(markdown, 300);
@@ -200,6 +207,7 @@ export default function App() {
               markdown={markdown}
               onApply={handleApplyAI}
               onError={showError}
+              onRefreshStatus={refreshAIStatus}
               canUndo={Boolean(aiUndo)}
               onUndo={handleUndoAI}
             />

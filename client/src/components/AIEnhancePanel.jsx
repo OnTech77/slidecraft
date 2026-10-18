@@ -3,13 +3,32 @@ import { api, isAbortError } from '../services/api.js';
 import Alert from './Alert.jsx';
 
 const MAX_AI_CHARS = 30_000;
+const PROVIDER_KEY = 'slidecraft.aiProvider';
+
+const savedProvider = () => {
+  try {
+    return localStorage.getItem(PROVIDER_KEY);
+  } catch {
+    return null;
+  }
+};
+
+const saveProvider = (id) => {
+  try {
+    localStorage.setItem(PROVIDER_KEY, id);
+  } catch {
+    // Private mode or blocked storage: the choice just is not remembered.
+  }
+};
 
 /**
  * Choose an AI action, run it, then review a before/after comparison.
  * Nothing changes in the editor until the user clicks "Apply changes".
  */
-export default function AIEnhancePanel({ aiStatus, markdown, onApply, onError, canUndo, onUndo }) {
+export default function AIEnhancePanel({ aiStatus, markdown, onApply, onError, canUndo, onUndo, onRefreshStatus }) {
   const [action, setAction] = useState('improve');
+  const [providerChoice, setProviderChoice] = useState(savedProvider);
+  const [checking, setChecking] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const controllerRef = useRef(null);
@@ -17,11 +36,34 @@ export default function AIEnhancePanel({ aiStatus, markdown, onApply, onError, c
   // Cancel an in-flight request if the panel is closed.
   useEffect(() => () => controllerRef.current?.abort(), []);
 
+  // Check the providers again each time the step opens (Ollama may have been started since).
+  useEffect(() => {
+    onRefreshStatus?.();
+  }, [onRefreshStatus]);
+
   if (!aiStatus) {
     return <p className="muted">Checking AI availability…</p>;
   }
 
-  const configured = aiStatus.configured;
+  const providers = aiStatus.providers ?? [];
+  const provider =
+    providers.find((p) => p.id === providerChoice) ?? providers.find((p) => p.id === aiStatus.defaultProvider) ?? providers[0] ?? null;
+  const configured = Boolean(provider?.available);
+  const local = provider?.id === 'ollama';
+
+  const chooseProvider = (id) => {
+    setProviderChoice(id);
+    saveProvider(id);
+  };
+
+  const checkAgain = async () => {
+    setChecking(true);
+    try {
+      await onRefreshStatus?.();
+    } finally {
+      setChecking(false);
+    }
+  };
   const empty = markdown.trim() === '';
   const tooLong = markdown.length > MAX_AI_CHARS;
 
@@ -31,8 +73,8 @@ export default function AIEnhancePanel({ aiStatus, markdown, onApply, onError, c
     setLoading(true);
     setResult(null);
     try {
-      const response = await api.enhance(markdown, action, { signal: controller.signal });
-      setResult({ before: markdown, after: response.markdown, action });
+      const response = await api.enhance(markdown, action, { provider: provider?.id, signal: controller.signal });
+      setResult({ before: markdown, after: response.markdown, action, model: response.model });
     } catch (err) {
       if (!isAbortError(err)) onError(err.message);
     } finally {
@@ -48,7 +90,8 @@ export default function AIEnhancePanel({ aiStatus, markdown, onApply, onError, c
     return (
       <div className="ai-result">
         <Alert type="info">
-          Review the <strong>{actionLabel(result.action)}</strong> result below. Your slides only change when you apply it.
+          Review the <strong>{actionLabel(result.action)}</strong> result from {result.model} below. Your slides only change when you apply
+          it.
         </Alert>
         {unchanged && <Alert type="warning">The AI did not suggest any changes.</Alert>}
         {result.before !== markdown && (
@@ -86,12 +129,38 @@ export default function AIEnhancePanel({ aiStatus, markdown, onApply, onError, c
 
   return (
     <div className="ai-panel">
-      {!configured && (
+      <div className="field">
+        <label htmlFor="ai-provider" className="label">
+          AI model
+        </label>
+        <select
+          id="ai-provider"
+          className="input"
+          value={provider?.id ?? ''}
+          onChange={(e) => chooseProvider(e.target.value)}
+          disabled={loading || providers.length === 0}
+        >
+          {providers.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.label} · {p.model}
+              {p.available ? '' : ' (not available)'}
+            </option>
+          ))}
+        </select>
+        {provider && <span className="muted field-hint">{provider.description}</span>}
+      </div>
+
+      {provider && !configured && (
         <Alert type="warning">
-          AI enhancements are turned off. To enable them, add your <code>OPENAI_API_KEY</code> to <code>server/.env</code> and restart the
-          server.
+          <span className="ai-unavailable">
+            {provider.label} is not available. {provider.reason}
+            <button type="button" className="btn btn-secondary btn-sm" onClick={checkAgain} disabled={checking}>
+              {checking ? 'Checking…' : 'Check again'}
+            </button>
+          </span>
         </Alert>
       )}
+      {!provider && <Alert type="warning">Could not check which AI models are available. Make sure the server is running.</Alert>}
       {configured && empty && <Alert type="info">Add some Markdown content first, then come back to enhance it.</Alert>}
       {configured && tooLong && (
         <Alert type="warning">
@@ -116,7 +185,7 @@ export default function AIEnhancePanel({ aiStatus, markdown, onApply, onError, c
         <button type="button" className="btn btn-primary" onClick={run} disabled={!configured || empty || tooLong || loading}>
           {loading ? (
             <>
-              <span className="spinner" aria-hidden="true" /> Enhancing…
+              <span className="spinner" aria-hidden="true" /> {local ? 'Running on this computer…' : 'Enhancing…'}
             </>
           ) : (
             `✨ ${actionLabel(action)}`
@@ -133,7 +202,7 @@ export default function AIEnhancePanel({ aiStatus, markdown, onApply, onError, c
           </button>
         )}
       </div>
-      {configured && aiStatus.model && <p className="muted ai-model">Using model {aiStatus.model}</p>}
+      {loading && local && <p className="muted ai-model">Local models can take a minute or two, especially the first time they load.</p>}
     </div>
   );
 }
