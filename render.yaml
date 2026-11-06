@@ -1,0 +1,28 @@
+# Render Blueprint: deploys SlideCraft as one web service that serves both the API and the
+# built React app. In Render choose New > Blueprint, pick this repository, and it reads this file.
+# Every push to main redeploys the site.
+services:
+  - type: web
+    name: slidecraft
+    runtime: node
+    plan: free
+    buildCommand: npm run install:all && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      # Render's proxy sits in front of the app: rate limit by each visitor's real address.
+      - key: TRUST_PROXY
+        value: "1"
+      # Chrome (for PDF export) can't use its sandbox on Render.
+      - key: CHROME_NO_SANDBOX
+        value: "1"
+      # Install Chrome inside the project, so it is still there when the app runs after the build.
+      - key: PUPPETEER_CACHE_DIR
+        value: /opt/render/project/src/.cache/puppeteer
+      # Ollama only runs on your own computer, so the hosted site uses the OpenAI-compatible
+      # provider. Add OPENAI_API_KEY (and, for a provider other than OpenAI, OPENAI_BASE_URL and
+      # OPENAI_MODEL) in the service's Environment tab when you are ready to turn AI on.
+      - key: AI_PROVIDER
+        value: openai

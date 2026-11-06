@@ -4,12 +4,20 @@ import { buildPresentationHtml } from './slideGenerator.js';
 
 const RENDER_TIMEOUT_MS = 30_000;
 
+// Some hosts (such as Render) lack the kernel features Chrome's sandbox needs, and set
+// CHROME_NO_SANDBOX=1 so Chrome can start. Slides render with JavaScript off and can only load
+// data: URLs and public https: resources (see isAllowedResource), which limits the risk.
+const CHROME_ARGS = [
+  '--disable-dev-shm-usage',
+  ...(process.env.CHROME_NO_SANDBOX === '1' ? ['--no-sandbox', '--disable-setuid-sandbox'] : []),
+];
+
 let browserPromise = null;
 
 /** Launch Chrome once and reuse it; relaunch if it crashes or fails to start. */
 function getBrowser() {
   browserPromise ??= puppeteer
-    .launch({ headless: true, args: ['--disable-dev-shm-usage'] })
+    .launch({ headless: true, args: CHROME_ARGS })
     .then((browser) => {
       browser.on('disconnected', () => {
         browserPromise = null;

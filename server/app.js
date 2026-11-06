@@ -15,10 +15,19 @@ export const BODY_LIMIT = '10mb';
 const CLIENT_DIST = fileURLToPath(new URL('../client/dist', import.meta.url));
 
 /** Build the Express app. Kept separate from index.js so tests can start it on any port. */
-export function createApp({ clientOrigin = process.env.CLIENT_ORIGIN ?? 'http://localhost:5173' } = {}) {
+export function createApp({
+  clientOrigin = process.env.CLIENT_ORIGIN ?? 'http://localhost:5173',
+  trustProxy = process.env.TRUST_PROXY,
+} = {}) {
   const app = express();
 
   app.disable('x-powered-by');
+  // Behind a hosting proxy (such as Render) every request comes from the proxy's address, so the
+  // per-IP rate limits would treat all visitors as one. TRUST_PROXY=<number of proxies> makes
+  // Express read the visitor's address from X-Forwarded-For instead. Leave it unset when nothing
+  // sits in front of the server, or visitors could fake their address to dodge the limits.
+  const proxyHops = Number.parseInt(trustProxy, 10);
+  if (proxyHops > 0) app.set('trust proxy', proxyHops);
   app.use(
     helmet({
       contentSecurityPolicy: {

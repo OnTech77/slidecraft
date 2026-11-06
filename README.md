@@ -53,6 +53,16 @@ npm run build   # builds the React app into client/dist
 npm start       # Express serves the API and the built app on http://localhost:3001
 ```
 
+### Deploy online (Render)
+
+[`render.yaml`](render.yaml) sets up a free [Render](https://render.com) web service that builds and runs the app, and redeploys on every push to `main`:
+
+1. Sign in to Render with GitHub, choose **New → Blueprint**, and pick this repository.
+2. Click **Deploy**. The first build takes a few minutes, mostly downloading Chrome for PDF export.
+3. To turn on AI, add `OPENAI_API_KEY` in the service's **Environment** tab. For a provider other than OpenAI, also set `OPENAI_BASE_URL` and `OPENAI_MODEL` (see Configuration).
+
+Free services sleep after 15 minutes without visitors, and the next visit takes about a minute to wake them. Anyone with the link can use the AI with your key, within the per-visitor rate limits.
+
 ### Tests
 
 ```bash
@@ -177,6 +187,10 @@ All endpoints are under `/api`. Errors always look like `{ "error": { "code": ".
 | `CLIENT_ORIGIN` | `http://localhost:5173` | Allowed CORS origin in development |
 | `OPENAI_API_KEY` | (empty) | Enables AI features |
 | `OPENAI_MODEL` | `gpt-4o-mini` | Model used for enhancements |
+| `OPENAI_BASE_URL` | OpenAI | Send the "OpenAI API" option to any OpenAI-compatible provider instead, e.g. `https://api.groq.com/openai/v1` (Groq) or `https://openrouter.ai/api/v1` (OpenRouter), with that provider's key and model |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Address of the local Ollama server |
 | `OLLAMA_MODEL` | `gemma4:e4b` | Local model used when Ollama is chosen |
 | `AI_PROVIDER` | (empty) | Provider selected by default: `openai` or `ollama`. Empty means OpenAI when a key is set, otherwise Ollama |
+| `TRUST_PROXY` | (empty) | Number of proxies in front of the server (`1` on Render), so rate limits count each visitor separately. Leave empty when nothing is in front, or visitors could fake their address |
+| `CHROME_NO_SANDBOX` | (empty) | `1` runs Chrome without its sandbox, for hosts like Render where the sandbox can't start |
+| `PUPPETEER_CACHE_DIR` | `~/.cache/puppeteer` | Where Chrome for PDF export is installed (set inside the project on Render) |

@@ -33,6 +33,27 @@ describe('app', () => {
   });
 });
 
+describe('behind a hosting proxy', () => {
+  let server;
+  before(async () => {
+    server = await startTestServer({ trustProxy: '1' });
+  });
+  after(() => server.close());
+
+  const exportFrom = (visitor) =>
+    fetch(`${server.baseUrl}/api/export/json`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': visitor },
+      body: JSON.stringify({ markdown: '# Hi' }),
+    });
+
+  it('rate limits each visitor separately, not everyone together', async () => {
+    for (let i = 0; i < 20; i += 1) assert.equal((await exportFrom('203.0.113.1')).status, 200);
+    assert.equal((await exportFrom('203.0.113.1')).status, 429);
+    assert.equal((await exportFrom('203.0.113.2')).status, 200);
+  });
+});
+
 describe('toSafeError', () => {
   it('passes AppError messages through', () => {
     const { status, body } = toSafeError(new AppError(422, 'X', 'Visible message'));
