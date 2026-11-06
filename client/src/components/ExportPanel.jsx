@@ -8,8 +8,13 @@ const FORMATS = [
   { id: 'json', extension: 'json', label: 'JSON', summary: 'JSON', description: 'Slide data (text, notes, HTML) for other tools.' },
 ];
 
+// The browser-only version (GitHub Pages) has no server to make PDFs, so it uses the print dialog.
+const PDF_VIA_PRINT = import.meta.env.MODE === 'pages';
+
 const NOTES = {
-  pdf: 'Speaker notes are not included in the PDF. Images must use public https:// links to appear in the export.',
+  pdf: PDF_VIA_PRINT
+    ? 'Opens the print dialog: choose “Save as PDF” as the destination. Speaker notes are not included.'
+    : 'Speaker notes are not included in the PDF. Images must use public https:// links to appear in the export.',
   html: 'Speaker notes appear under each slide on screen and are hidden when you print.',
   md: 'Long slides are saved already split, exactly as they appear in the preview.',
   json: 'Includes each slide’s title, layout, Markdown, sanitized HTML and speaker notes.',
@@ -51,8 +56,12 @@ export default function ExportPanel({ markdown, presentation, theme, transition,
     setExporting(true);
     try {
       const blob = await api.exportDeck(format.id, { markdown, theme, transition, filename });
-      downloadBlob(blob, filename);
-      onSuccess(`Downloaded ${filename}.`);
+      if (blob) {
+        downloadBlob(blob, filename);
+        onSuccess(`Downloaded ${filename}.`);
+      } else {
+        onSuccess('To save the PDF, choose “Save as PDF” in the print dialog.');
+      }
     } catch (err) {
       onError(err.message);
     } finally {
@@ -107,6 +116,8 @@ export default function ExportPanel({ markdown, presentation, theme, transition,
           <>
             <span className="spinner" aria-hidden="true" /> Creating {format.label}…
           </>
+        ) : PDF_VIA_PRINT && format.id === 'pdf' ? (
+          'Print or save as PDF'
         ) : (
           `Download ${format.label}`
         )}

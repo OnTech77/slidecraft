@@ -159,7 +159,7 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <div className="brand">
-          <img src="/favicon.svg" alt="" width="30" height="30" />
+          <img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" width="30" height="30" />
           <span className="brand-name">
             Slide<em>craft</em>
           </span>

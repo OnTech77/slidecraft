@@ -53,6 +53,25 @@ npm run build   # builds the React app into client/dist
 npm start       # Express serves the API and the built app on http://localhost:3001
 ```
 
+### Use it in the browser (GitHub Pages)
+
+A browser-only version is published at **https://ontech77.github.io/slidecraft/** on every push to `main` (see [`.github/workflows/pages.yml`](.github/workflows/pages.yml)). There is nothing to install: open the link in any browser.
+
+It has no server: the page runs the server's own slide code itself (`npm run build:pages`, see [`client/browserOnly.js`](client/browserOnly.js)), so slides, themes and HTML, Markdown and JSON exports come out exactly the same. Two things differ:
+
+- **PDF:** the export opens the print dialog. Choose **Save as PDF** as the destination.
+- **AI:** only **Local model (Ollama)** works, with Ollama running on the computer you're using. Online AI would need an API key in a public page, where anyone could copy it.
+
+To let the web version use Ollama on a Mac, allow the site once, then quit Ollama from the menu bar and open it again:
+
+```bash
+launchctl setenv OLLAMA_ORIGINS "https://ontech77.github.io"
+```
+
+This lasts until you restart the Mac. If your browser asks whether the site may access devices on your local network, allow it.
+
+To try the web version locally: `npm run build:pages`, then `npm run preview --prefix client -- --mode pages` and open http://localhost:4173/slidecraft/.
+
 ### Deploy online (Render)
 
 [`render.yaml`](render.yaml) sets up a free [Render](https://render.com) web service that builds and runs the app, and redeploys on every push to `main`:
@@ -146,6 +165,7 @@ slidecraft/
       ├─ App.jsx             State and step-by-step flow
       ├─ services/presentChannel.js  Sends the deck to the presenter tab
       ├─ services/api.js     API client with friendly errors
+      ├─ browser/            Browser-only stand-in for the API, used by the GitHub Pages build
       ├─ hooks/useDebounce.js
       └─ components/         MarkdownEditor, FileUpload, SlidePreview, ScaledSlide,
                              ThemeSelector, TransitionPicker, Presenter, AIEnhancePanel,
